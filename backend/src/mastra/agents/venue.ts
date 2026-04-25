@@ -1,21 +1,9 @@
 import { Agent } from '@mastra/core/agent'
 import { anthropic } from '@ai-sdk/anthropic'
-import { z } from 'zod'
 import { createEventTool } from '../tools/events'
 
-export const EventDraftSchema = z.object({
-  name:        z.string().describe('Event name'),
-  date:        z.string().describe('Human-friendly date, e.g. "Sat, 25 Apr • 14:00"'),
-  location:    z.string().describe('City and country or venue name'),
-  description: z.string().describe('Short event description, 1-2 sentences'),
-  ticketTiers: z.array(z.object({
-    id:    z.string(),
-    name:  z.string(),
-    price: z.string().describe('Price with currency symbol, e.g. "€25.00"'),
-  })).min(1),
-})
-
-export type EventDraft = z.infer<typeof EventDraftSchema>
+// Re-export from shared schema for backwards compat
+export { EventDraftSchema, type EventDraft } from '../schemas/event'
 
 const INSTRUCTIONS = `You are an event-setup assistant for bunq, a digital bank.
 Analyze the venue images and/or descriptive text the user provides and produce a

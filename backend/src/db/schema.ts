@@ -6,6 +6,7 @@ export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'f
 
 export const events = pgTable('events', {
   id:          uuid('id').defaultRandom().primaryKey(),
+  creatorId:   uuid('creator_id'),
   name:        text('name').notNull(),
   date:        text('date').notNull(),
   location:    text('location').notNull(),

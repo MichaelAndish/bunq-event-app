@@ -1,15 +1,20 @@
 import { createWorkflow, createStep } from '@mastra/core/workflows'
 import { z } from 'zod'
-import { EventDraftSchema } from '../agents/venue'
+import { EventDraftSchema } from '../schemas/event'
 import { db } from '../../db/client'
 import { events, ticketTiers } from '../../db/schema'
+import { parsePrice } from '../../db/price'
 
-// Step 1: validate and normalise the AI draft
+const WorkflowInputSchema = EventDraftSchema.extend({
+  creatorId: z.string().uuid().optional(),
+  bannerUrl: z.string().optional(),
+})
+
 const validateDraftStep = createStep({
-  id: 'validate-draft',
-  description: 'Validate and normalise the event draft from the venue agent',
-  inputSchema:  EventDraftSchema,
-  outputSchema: EventDraftSchema,
+  id:           'validate-draft',
+  description:  'Validate and normalise the event draft',
+  inputSchema:  WorkflowInputSchema,
+  outputSchema: WorkflowInputSchema,
   execute: async ({ inputData }) => ({
     ...inputData,
     ticketTiers: inputData.ticketTiers.map((t, i) => ({
@@ -19,11 +24,10 @@ const validateDraftStep = createStep({
   }),
 })
 
-// Step 2: persist to PostgreSQL
 const persistEventStep = createStep({
-  id: 'persist-event',
-  description: 'Save the validated event and ticket tiers to the database',
-  inputSchema:  EventDraftSchema,
+  id:           'persist-event',
+  description:  'Save the validated event and ticket tiers to the database',
+  inputSchema:  WorkflowInputSchema,
   outputSchema: z.object({ eventId: z.string().uuid() }),
   execute: async ({ inputData }) => {
     const [event] = await db.insert(events).values({
@@ -31,6 +35,8 @@ const persistEventStep = createStep({
       date:        inputData.date,
       location:    inputData.location,
       description: inputData.description,
+      creatorId:   inputData.creatorId,
+      bannerUrl:   inputData.bannerUrl,
     }).returning({ id: events.id })
 
     if (inputData.ticketTiers.length > 0) {
@@ -38,7 +44,7 @@ const persistEventStep = createStep({
         inputData.ticketTiers.map(t => ({
           eventId:  event.id,
           name:     t.name,
-          price:    t.price.replace(/[^0-9.]/g, ''),
+          price:    parsePrice(t.price),
           currency: 'EUR' as const,
         }))
       )
@@ -48,10 +54,9 @@ const persistEventStep = createStep({
   },
 })
 
-// Workflow: validate → persist
 export const createEventWorkflow = createWorkflow({
   id:           'create-event',
-  inputSchema:  EventDraftSchema,
+  inputSchema:  WorkflowInputSchema,
   outputSchema: z.object({ eventId: z.string().uuid() }),
 })
   .then(validateDraftStep)

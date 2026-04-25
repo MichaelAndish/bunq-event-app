@@ -6,6 +6,7 @@ import ToggleSwitch from '../components/ToggleSwitch'
 import SubmitButton from '../components/SubmitButton'
 import TierSheet from '../components/TierSheet'
 import { CalendarIcon, LocationPinIcon, ChevronRightIcon, EditImageIcon, CameraIcon, PlusIcon } from '../components/Icons'
+import { api } from '../api/client'
 import type { Page, EventDraft } from '../App'
 
 type Tier = { id: string; name: string; subtitle: string; price: string }
@@ -22,6 +23,7 @@ export default function CreateEvent({ onBack, onNavigate, draft }: Props) {
   const [eventName, setEventName]       = useState(draft?.name ?? '')
   const [date, setDate]                 = useState(draft?.date ?? '')
   const [location, setLocation]         = useState(draft?.location ?? '')
+  const [description, setDescription]  = useState(draft?.description ?? '')
   const [tiers, setTiers]               = useState<Tier[]>(() =>
     draft?.ticketTiers?.length
       ? draft.ticketTiers.map(t => ({ ...t, subtitle: '' }))
@@ -29,6 +31,8 @@ export default function CreateEvent({ onBack, onNavigate, draft }: Props) {
   )
   const [sheetOpen,   setSheetOpen]   = useState(false)
   const [editingTier, setEditingTier] = useState<Tier | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError,  setSubmitError]  = useState('')
 
   const openAdd  = () => { setEditingTier(null); setSheetOpen(true) }
   const openEdit = (tier: Tier) => { setEditingTier(tier); setSheetOpen(true) }
@@ -43,20 +47,23 @@ export default function CreateEvent({ onBack, onNavigate, draft }: Props) {
     closeSheet()
   }
 
-  // Banner image
-  const [bannerUrl, setBannerUrl]   = useState<string | null>(null)
-  const bannerInputRef              = useRef<HTMLInputElement>(null)
+  // Banner image — track both preview URL and actual File for upload
+  const [bannerUrl,  setBannerUrl]  = useState<string | null>(null)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
 
-  // Venue media from AI step
-  const [mediaPreviews, setMediaPreviews] = useState<string[]>([])
+  // Venue media — track File objects alongside preview URLs
+  const [mediaPreviews,  setMediaPreviews]  = useState<string[]>([])
+  const [mediaFileObjs,  setMediaFileObjs]  = useState<File[]>([])
   const mediaInputRef = useRef<HTMLInputElement>(null)
 
-  // Build preview URLs from draft media files, revoke on unmount
+  // Populate media from AI draft
   useEffect(() => {
     const draftFiles = draft?.mediaFiles ?? []
     if (!draftFiles.length) return
     const urls = draftFiles.map(f => URL.createObjectURL(f))
     setMediaPreviews(urls)
+    setMediaFileObjs(draftFiles)
     return () => urls.forEach(u => URL.revokeObjectURL(u))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -65,20 +72,51 @@ export default function CreateEvent({ onBack, onNavigate, draft }: Props) {
     if (!file) return
     if (bannerUrl) URL.revokeObjectURL(bannerUrl)
     setBannerUrl(URL.createObjectURL(file))
+    setBannerFile(file)
     e.target.value = ''
   }
 
   const handleMediaAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const added = Array.from(e.target.files ?? []).map(f => URL.createObjectURL(f))
-    setMediaPreviews(prev => [...prev, ...added])
+    const added = Array.from(e.target.files ?? [])
+    setMediaPreviews(prev => [...prev, ...added.map(f => URL.createObjectURL(f))])
+    setMediaFileObjs(prev => [...prev, ...added])
     e.target.value = ''
   }
 
   const emptySlots = Math.max(0, 3 - mediaPreviews.length)
 
+  const handleSubmit = async () => {
+    setIsSubmitting(true)
+    setSubmitError('')
+    try {
+      const formData = new FormData()
+      formData.append('draft', JSON.stringify({
+        name:        eventName,
+        date,
+        location,
+        description,
+        ticketTiers: tiers.map(({ id, name, price }) => ({ id, name, price })),
+      }))
+      if (bannerFile) formData.append('banner', bannerFile)
+      mediaFileObjs.forEach(f => formData.append('media', f))
+      await api.createEvent(formData)
+      onNavigate('event-created')
+    } catch {
+      setSubmitError('Could not save event. Please try again.')
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div>
       <TopBar onBack={onBack} />
+
+      {/* Low-confidence AI warning */}
+      {draft?.lowConfidence && (
+        <div className="low-confidence-banner">
+          AI could not detect all details — please review and complete the fields below.
+        </div>
+      )}
 
       {/* ── Banner Image ─────────────────────────────── */}
       <div
@@ -176,7 +214,11 @@ export default function CreateEvent({ onBack, onNavigate, draft }: Props) {
         </div>
       </FormCard>
 
-      <SubmitButton label="Create Event" onClick={() => onNavigate('event-created')} />
+      {submitError && (
+        <p style={{ color: '#ff453a', fontSize: 13, textAlign: 'center', margin: '0 20px 8px' }}>{submitError}</p>
+      )}
+
+      <SubmitButton label={isSubmitting ? 'Saving…' : 'Create Event'} onClick={handleSubmit} disabled={isSubmitting} />
 
       {sheetOpen && (
         <TierSheet

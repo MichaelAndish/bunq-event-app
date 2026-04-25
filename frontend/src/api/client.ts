@@ -9,6 +9,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+async function multipart<T>(path: string, body: FormData): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, { method: 'POST', body })
+  if (!res.ok) throw new Error(`API error ${res.status}: ${path}`)
+  return res.json() as Promise<T>
+}
+
 type Transaction = {
   id: string
   amount: string
@@ -45,4 +51,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+
+  createEvent: (formData: FormData) =>
+    multipart<{ id: string; name: string; tiers: unknown[] }>('/events', formData),
 }

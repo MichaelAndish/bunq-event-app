@@ -31,6 +31,10 @@ export type EventDraft = {
   description: string
   ticketTiers: { id: string; name: string; price: string }[]
   mediaFiles?: File[]
+  // Enrichment fields from the AI pipeline
+  audienceProfile?: string
+  imagePrompt?: string
+  lowConfidence?: boolean
 }
 
 function Placeholder({ title }: { title: string }) {

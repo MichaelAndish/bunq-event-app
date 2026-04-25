@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { config } from './config'
 import { runMigrations } from './db/migrate'
+import { runSeed }       from './db/seed'
 import { ensureBucket } from './storage/client'
 import healthRouter      from './routes/health'
 import eventsRouter      from './routes/events'
@@ -29,8 +30,9 @@ app.onError((err, c) => {
 async function main() {
   try {
     await runMigrations()
+    await runSeed()
   } catch (err) {
-    console.error('Migration failed — check DATABASE_URL:', err)
+    console.error('Migration/seed failed — check DATABASE_URL:', err)
     process.exit(1)
   }
 

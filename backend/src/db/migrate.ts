@@ -22,15 +22,18 @@ export async function runMigrations(): Promise<void> {
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS events (
-        id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-        name        TEXT        NOT NULL,
-        date        TEXT        NOT NULL,
-        location    TEXT        NOT NULL,
-        description TEXT        DEFAULT '',
+        id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+        name        TEXT         NOT NULL,
+        date        TEXT         NOT NULL,
+        location    TEXT         NOT NULL,
+        description TEXT         DEFAULT '',
         banner_url  TEXT,
         status      event_status DEFAULT 'draft',
-        created_at  TIMESTAMPTZ DEFAULT NOW()
+        created_at  TIMESTAMPTZ  DEFAULT NOW()
       );
+
+      -- Idempotent: adds creator_id to tables created before this migration was introduced
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS creator_id UUID;
 
       CREATE TABLE IF NOT EXISTS ticket_tiers (
         id        UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
