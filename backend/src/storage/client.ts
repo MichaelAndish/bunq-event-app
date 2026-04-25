@@ -2,8 +2,6 @@ import {
   S3Client,
   PutObjectCommand,
   HeadBucketCommand,
-  CreateBucketCommand,
-  PutBucketPolicyCommand,
 } from '@aws-sdk/client-s3'
 import { randomUUID } from 'crypto'
 import { config } from '../config'
@@ -11,6 +9,7 @@ import { config } from '../config'
 function buildClient(): S3Client {
   return new S3Client({
     region: config.STORAGE_REGION,
+    // Only set endpoint for local MinIO — omit for real AWS S3
     ...(config.STORAGE_ENDPOINT ? { endpoint: config.STORAGE_ENDPOINT } : {}),
     forcePathStyle: config.STORAGE_FORCE_PATH_STYLE,
     credentials: {
@@ -22,34 +21,30 @@ function buildClient(): S3Client {
 
 export const s3 = buildClient()
 
-// Run once at startup — creates the bucket and makes it publicly readable.
-// Safe to call repeatedly; HeadBucket is a no-op if the bucket already exists.
+/**
+ * Validates that the configured S3/MinIO bucket is reachable at startup.
+ *
+ * In production: the bucket is pre-created by infra/bootstrap.sh with
+ * Block Public Access enabled. We do NOT attempt to create it here —
+ * that would fail with AccessDenied on AWS S3 with public-access blocked,
+ * and would be a security risk if it somehow succeeded.
+ *
+ * In local dev: MinIO auto-creates buckets when docker-compose runs
+ * the mc createbucket step, so HeadBucket will pass after a few seconds.
+ */
 export async function ensureBucket(): Promise<void> {
-  try {
-    await s3.send(new HeadBucketCommand({ Bucket: config.STORAGE_BUCKET }))
-  } catch {
-    await s3.send(new CreateBucketCommand({ Bucket: config.STORAGE_BUCKET }))
-
-    await s3.send(new PutBucketPolicyCommand({
-      Bucket: config.STORAGE_BUCKET,
-      Policy: JSON.stringify({
-        Version: '2012-10-17',
-        Statement: [{
-          Sid:       'PublicRead',
-          Effect:    'Allow',
-          Principal: '*',
-          Action:    ['s3:GetObject'],
-          Resource:  [`arn:aws:s3:::${config.STORAGE_BUCKET}/*`],
-        }],
-      }),
-    }))
-
-    console.log(`✅  Storage bucket "${config.STORAGE_BUCKET}" created and set to public-read`)
-  }
+  await s3.send(new HeadBucketCommand({ Bucket: config.STORAGE_BUCKET }))
+  console.log(`✅  Storage bucket "${config.STORAGE_BUCKET}" is reachable`)
 }
 
-// Uploads a file buffer and returns its public URL.
-// key: path inside the bucket, e.g. "venues/2024-01-abc.jpg"
+/**
+ * Uploads a file buffer and returns its public URL.
+ * The URL is constructed from STORAGE_PUBLIC_URL — in production this
+ * should point to a CloudFront distribution in front of the S3 bucket,
+ * not the bucket URL directly.
+ *
+ * Example key: "uploads/2024-01-15-<uuid>.jpg"
+ */
 export async function uploadFile(
   body: Buffer | Uint8Array,
   contentType: string,

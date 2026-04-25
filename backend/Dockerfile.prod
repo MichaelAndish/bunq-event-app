@@ -15,9 +15,9 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 
-# Copy .env if provided in build context (CI writes it before docker build)
-# App Runner env vars take precedence at runtime via process.env
-COPY --chown=node:node .env* ./
+# Do NOT COPY .env* — all env vars are injected at runtime via App Runner
+# RuntimeEnvironmentVariables (or docker-compose env_file for local dev).
 
 EXPOSE 9191
 CMD ["node", "dist/index.js"]
+

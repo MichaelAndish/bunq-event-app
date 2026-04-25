@@ -25,13 +25,21 @@ done
 BACKEND_ECR="${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${APP}-backend"
 MASTRA_ECR="${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${APP}-mastra"
 
+# ── S3 bucket helpers ───────────────────────────────────────────────────────
+create_bucket() {
+  local BUCKET="$1"
+  aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null && return
+  if [[ "$REGION" == "us-east-1" ]]; then
+    aws s3api create-bucket --bucket "$BUCKET" --region "$REGION"
+  else
+    aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" \
+      --create-bucket-configuration LocationConstraint="$REGION"
+  fi
+}
+
 # ── S3 bucket for frontend ──────────────────────────────────────────────────
 FRONTEND_BUCKET="${APP}-frontend-${ACCOUNT}"
-aws s3api head-bucket --bucket "$FRONTEND_BUCKET" 2>/dev/null \
-  || aws s3api create-bucket \
-       --bucket "$FRONTEND_BUCKET" \
-       --region "$REGION" \
-       --create-bucket-configuration LocationConstraint="$REGION"
+create_bucket "$FRONTEND_BUCKET"
 aws s3api put-public-access-block \
   --bucket "$FRONTEND_BUCKET" \
   --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
@@ -39,11 +47,7 @@ echo "  S3: $FRONTEND_BUCKET (CloudFront-only access)"
 
 # ── S3 bucket for event media (replaces MinIO in production) ────────────────
 MEDIA_BUCKET="${APP}-media-${ACCOUNT}"
-aws s3api head-bucket --bucket "$MEDIA_BUCKET" 2>/dev/null \
-  || aws s3api create-bucket \
-       --bucket "$MEDIA_BUCKET" \
-       --region "$REGION" \
-       --create-bucket-configuration LocationConstraint="$REGION"
+create_bucket "$MEDIA_BUCKET"
 aws s3api put-bucket-cors --bucket "$MEDIA_BUCKET" --cors-configuration '{
   "CORSRules": [{
     "AllowedHeaders": ["*"],

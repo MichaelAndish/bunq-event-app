@@ -1,4 +1,4 @@
-.PHONY: help install run stop restart logs status provision provision-person refresh-session
+.PHONY: help install run stop restart logs status provision provision-person refresh-session deploy setup-oidc
 
 help:
 	@printf "\n\033[1m  bunq Platform — available commands\033[0m\n"
@@ -12,6 +12,8 @@ help:
 	@printf "  \033[36m%-22s\033[0m %s\n" "make provision"        "Provision bunq sandbox (company)"
 	@printf "  \033[36m%-22s\033[0m %s\n" "make provision-person" "Provision bunq sandbox (person)"
 	@printf "  \033[36m%-22s\033[0m %s\n" "make refresh-session"  "Refresh expired bunq session token"
+	@printf "  \033[36m%-22s\033[0m %s\n" "make deploy"           "Deploy everything to AWS (needs AWS env vars)"
+	@printf "  \033[36m%-22s\033[0m %s\n" "make setup-oidc"       "One-time: configure GitHub OIDC → IAM role"
 	@printf "\n"
 
 install:
@@ -54,3 +56,11 @@ status:
 	@printf "  \033[36m%-22s\033[0m %s\n" "MinIO Console"        "http://localhost:9001  (minioadmin / minioadmin)"
 	@printf "  \033[36m%-22s\033[0m %s\n" "MinIO API (S3)"       "http://localhost:9000/bunq-events"
 	@printf "\n"
+
+deploy:
+	@bash scripts/deploy.sh $(ARGS)
+
+# One-time OIDC setup — requires --github-org and --github-repo args:
+#   make setup-oidc ARGS="--github-org yourorg --github-repo bunq"
+setup-oidc:
+	@bash scripts/setup-github-oidc.sh $(ARGS)

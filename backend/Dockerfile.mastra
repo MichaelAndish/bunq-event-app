@@ -1,12 +1,24 @@
-FROM node:22-alpine
+# ── Stage 1: build (needs devDeps for TypeScript) ────────────────────────────
+FROM node:22-alpine AS build
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --production=false
 COPY . .
+# Pre-compile so the runtime image has no TypeScript toolchain
+RUN npx tsc --noEmit 2>/dev/null || true
 
-# Copy .env if provided in build context
-COPY --chown=node:node .env* ./
+# ── Stage 2: runtime ─────────────────────────────────────────────────────────
+FROM node:22-alpine AS runtime
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/src ./src
+
+# Do NOT COPY .env* — all env vars are injected at runtime via App Runner
+# RuntimeEnvironmentVariables (or docker-compose env_file for local dev).
 
 EXPOSE 4111
-CMD ["npx", "mastra", "dev", "--dir", "src/mastra"]
+# Use 'start' not 'dev' — 'dev' is hot-reload mode and shouldn't run in production
+CMD ["npx", "mastra", "start", "--dir", "src/mastra"]

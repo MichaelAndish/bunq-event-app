@@ -5,39 +5,84 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Grant the OIDC token permission so AWS can verify the caller identity
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
 env:
-  AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
 
 jobs:
-  # ── 0. Generate .env from secrets (shared artifact) ──────────────────────
+  # ── 0. Fetch secrets from AWS Secrets Manager + generate .env ────────────
   generate-env:
-    name: Generate .env
+    name: Generate .env from AWS Secrets Manager
     runs-on: ubuntu-latest
+    outputs:
+      backend_ecr:          ${{ steps.secrets.outputs.backend_ecr }}
+      mastra_ecr:           ${{ steps.secrets.outputs.mastra_ecr }}
+      frontend_bucket:      ${{ steps.secrets.outputs.frontend_bucket }}
+      cf_distribution_id:   ${{ steps.secrets.outputs.cf_distribution_id }}
+      backend_service_arn:  ${{ steps.secrets.outputs.backend_service_arn }}
+      mastra_service_arn:   ${{ steps.secrets.outputs.mastra_service_arn }}
+      backend_api_url:      ${{ steps.secrets.outputs.backend_api_url }}
+      frontend_origin:      ${{ steps.secrets.outputs.frontend_origin }}
     steps:
-      - name: Write .env from secrets
+      # Assume the deploy role via OIDC — no static AWS keys needed in GitHub
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - name: Fetch app secrets from Secrets Manager
+        id: secrets
         run: |
-          cat > .env << 'ENVEOF'
-          NODE_ENV=production
-          PORT=9191
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
-          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
-          BUNQ_API_KEY=${{ secrets.BUNQ_API_KEY }}
-          BUNQ_INSTALLATION_TOKEN=${{ secrets.BUNQ_INSTALLATION_TOKEN }}
-          BUNQ_SESSION_TOKEN=${{ secrets.BUNQ_SESSION_TOKEN }}
-          BUNQ_USER_ID=${{ secrets.BUNQ_USER_ID }}
-          BUNQ_DEFAULT_MONETARY_ACCOUNT_ID=${{ secrets.BUNQ_ACCOUNT_ID }}
-          BUNQ_PRIVATE_KEY=${{ secrets.BUNQ_PRIVATE_KEY }}
-          BUNQ_API_BASE_URL=https://public-api.sandbox.bunq.com/v1
-          BUNQ_USE_MOCK=false
-          STORAGE_ENDPOINT=${{ secrets.STORAGE_ENDPOINT }}
-          STORAGE_BUCKET=${{ secrets.STORAGE_BUCKET }}
-          STORAGE_ACCESS_KEY=${{ secrets.STORAGE_ACCESS_KEY }}
-          STORAGE_SECRET_KEY=${{ secrets.STORAGE_SECRET_KEY }}
-          STORAGE_PUBLIC_URL=${{ secrets.STORAGE_PUBLIC_URL }}
-          STORAGE_FORCE_PATH_STYLE=false
-          STORAGE_REGION=${{ env.AWS_REGION }}
-          ENVEOF
-          echo "✅ .env generated ($(wc -l < .env) lines)"
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id bunq/production \
+            --query SecretString --output text)
+
+          # Parse each value
+          get() { echo "$SECRET" | jq -r ".$1 // empty"; }
+
+          # Infra values (stored separately under bunq/infra)
+          INFRA=$(aws secretsmanager get-secret-value \
+            --secret-id bunq/infra \
+            --query SecretString --output text 2>/dev/null || echo '{}')
+          geti() { echo "$INFRA" | jq -r ".$1 // empty"; }
+
+          echo "backend_ecr=$(geti BACKEND_ECR_REPO)"                        >> "$GITHUB_OUTPUT"
+          echo "mastra_ecr=$(geti MASTRA_ECR_REPO)"                          >> "$GITHUB_OUTPUT"
+          echo "frontend_bucket=$(geti S3_FRONTEND_BUCKET)"                  >> "$GITHUB_OUTPUT"
+          echo "cf_distribution_id=$(geti CLOUDFRONT_DISTRIBUTION_ID)"       >> "$GITHUB_OUTPUT"
+          echo "backend_service_arn=$(geti BACKEND_APP_RUNNER_SERVICE_ARN)"  >> "$GITHUB_OUTPUT"
+          echo "mastra_service_arn=$(geti MASTRA_APP_RUNNER_SERVICE_ARN)"    >> "$GITHUB_OUTPUT"
+          echo "backend_api_url=$(geti BACKEND_API_URL)"                     >> "$GITHUB_OUTPUT"
+          echo "frontend_origin=$(geti FRONTEND_ORIGIN)"                     >> "$GITHUB_OUTPUT"
+
+          # Write .env for Docker build context (strips leading whitespace via printf)
+          printf '%s\n' \
+            "NODE_ENV=production" \
+            "PORT=9191" \
+            "DATABASE_URL=$(get DATABASE_URL)" \
+            "ANTHROPIC_API_KEY=$(get ANTHROPIC_API_KEY)" \
+            "BUNQ_API_KEY=$(get BUNQ_API_KEY)" \
+            "BUNQ_INSTALLATION_TOKEN=$(get BUNQ_INSTALLATION_TOKEN)" \
+            "BUNQ_SESSION_TOKEN=$(get BUNQ_SESSION_TOKEN)" \
+            "BUNQ_USER_ID=$(get BUNQ_USER_ID)" \
+            "BUNQ_DEFAULT_MONETARY_ACCOUNT_ID=$(get BUNQ_DEFAULT_MONETARY_ACCOUNT_ID)" \
+            "BUNQ_PRIVATE_KEY=$(get BUNQ_PRIVATE_KEY)" \
+            "BUNQ_API_BASE_URL=https://public-api.sandbox.bunq.com/v1" \
+            "BUNQ_USE_MOCK=false" \
+            "STORAGE_ENDPOINT=$(get STORAGE_ENDPOINT)" \
+            "STORAGE_BUCKET=$(get STORAGE_BUCKET)" \
+            "STORAGE_ACCESS_KEY=$(get STORAGE_ACCESS_KEY)" \
+            "STORAGE_SECRET_KEY=$(get STORAGE_SECRET_KEY)" \
+            "STORAGE_PUBLIC_URL=$(get STORAGE_PUBLIC_URL)" \
+            "STORAGE_FORCE_PATH_STYLE=false" \
+            "STORAGE_REGION=${{ env.AWS_REGION }}" \
+            > .env
+          echo "✅ .env generated ($(wc -l < .env | tr -d ' ') lines)"
 
       - name: Upload .env artifact
         uses: actions/upload-artifact@v4
@@ -60,6 +105,12 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region:     ${{ env.AWS_REGION }}
+
       - name: Download .env
         uses: actions/download-artifact@v4
         with:
@@ -68,9 +119,11 @@ jobs:
       - name: Set private key file
         run: |
           mkdir -p .bunq
-          printf '%s' "${{ secrets.BUNQ_PRIVATE_KEY }}" > .bunq/client-private.pem
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id bunq/production \
+            --query SecretString --output text)
+          printf '%s' "$(echo "$SECRET" | jq -r '.BUNQ_PRIVATE_KEY')" > .bunq/client-private.pem
           chmod 600 .bunq/client-private.pem
-          # Point config at the written key
           echo "BUNQ_PRIVATE_KEY_PATH=.bunq/client-private.pem" >> .env
 
       - name: Refresh session
@@ -80,6 +133,18 @@ jobs:
           SESSION=$(grep '^BUNQ_SESSION_TOKEN=' .env | cut -d= -f2-)
           echo "session_token=$SESSION" >> "$GITHUB_OUTPUT"
           echo "✅ Session refreshed"
+
+      - name: Update session token in Secrets Manager
+        run: |
+          SESSION=$(grep '^BUNQ_SESSION_TOKEN=' .env | cut -d= -f2-)
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id bunq/production \
+            --query SecretString --output text)
+          UPDATED=$(echo "$SECRET" | jq --arg t "$SESSION" '.BUNQ_SESSION_TOKEN = $t')
+          aws secretsmanager put-secret-value \
+            --secret-id bunq/production \
+            --secret-string "$UPDATED"
+          echo "✅ Session token updated in Secrets Manager"
 
       - name: Upload refreshed .env
         uses: actions/upload-artifact@v4
@@ -91,7 +156,7 @@ jobs:
   # ── 2. Build backend + Mastra Docker images → ECR ────────────────────────
   build-push-backend:
     name: Build & push backend image
-    needs: refresh-bunq-session
+    needs: [generate-env, refresh-bunq-session]
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.meta.outputs.image }}
@@ -103,12 +168,11 @@ jobs:
         with:
           name: env-file-refreshed
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region:     ${{ env.AWS_REGION }}
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -116,18 +180,18 @@ jobs:
       - name: Build & push
         id: meta
         env:
-          REPO: ${{ secrets.BACKEND_ECR_REPO }}
+          REPO: ${{ needs.generate-env.outputs.backend_ecr }}
           SHA:  ${{ github.sha }}
         run: |
           cp .env backend/.env
-          docker build -f backend/Dockerfile.prod -t $REPO:$SHA -t $REPO:latest backend
-          docker push $REPO:$SHA
-          docker push $REPO:latest
+          docker build -f backend/Dockerfile.prod -t "$REPO:$SHA" -t "$REPO:latest" backend
+          docker push "$REPO:$SHA"
+          docker push "$REPO:latest"
           echo "image=$REPO:$SHA" >> "$GITHUB_OUTPUT"
 
   build-push-mastra:
     name: Build & push Mastra image
-    needs: refresh-bunq-session
+    needs: [generate-env, refresh-bunq-session]
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.meta.outputs.image }}
@@ -139,12 +203,11 @@ jobs:
         with:
           name: env-file-refreshed
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region:     ${{ env.AWS_REGION }}
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -152,18 +215,19 @@ jobs:
       - name: Build & push
         id: meta
         env:
-          REPO: ${{ secrets.MASTRA_ECR_REPO }}
+          REPO: ${{ needs.generate-env.outputs.mastra_ecr }}
           SHA:  ${{ github.sha }}
         run: |
           cp .env backend/.env
-          docker build -f backend/Dockerfile.mastra -t $REPO:$SHA -t $REPO:latest backend
-          docker push $REPO:$SHA
-          docker push $REPO:latest
+          docker build -f backend/Dockerfile.mastra -t "$REPO:$SHA" -t "$REPO:latest" backend
+          docker push "$REPO:$SHA"
+          docker push "$REPO:latest"
           echo "image=$REPO:$SHA" >> "$GITHUB_OUTPUT"
 
   # ── 3. Frontend → S3 + CloudFront ────────────────────────────────────────
   deploy-frontend:
     name: Deploy frontend to S3
+    needs: generate-env
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -177,51 +241,84 @@ jobs:
       - name: Install & build
         working-directory: frontend
         env:
-          VITE_API_URL: ${{ secrets.BACKEND_API_URL }}
+          VITE_API_URL: ${{ needs.generate-env.outputs.backend_api_url }}
         run: |
           npm ci
           npm run build
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region:     ${{ env.AWS_REGION }}
 
       - name: Sync to S3
         run: |
-          # Assets (hashed filenames) — long cache
-          aws s3 sync frontend/dist/ s3://${{ secrets.S3_FRONTEND_BUCKET }}/ \
+          aws s3 sync frontend/dist/ s3://${{ needs.generate-env.outputs.frontend_bucket }}/ \
             --delete \
             --cache-control "public,max-age=31536000,immutable" \
             --exclude "index.html"
-          # HTML — no cache (always fetch fresh for SPA routing)
-          aws s3 cp frontend/dist/index.html s3://${{ secrets.S3_FRONTEND_BUCKET }}/index.html \
+          aws s3 cp frontend/dist/index.html \
+            s3://${{ needs.generate-env.outputs.frontend_bucket }}/index.html \
             --cache-control "no-cache,no-store,must-revalidate"
 
       - name: Invalidate CloudFront
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --distribution-id ${{ needs.generate-env.outputs.cf_distribution_id }} \
             --paths "/*"
 
   # ── 4. Deploy backend App Runner service ─────────────────────────────────
   deploy-backend:
     name: Deploy backend to App Runner
-    needs: [build-push-backend, refresh-bunq-session]
+    needs: [generate-env, build-push-backend, refresh-bunq-session]
     runs-on: ubuntu-latest
     steps:
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - name: Fetch secrets for runtime env
+        id: sm
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id bunq/production \
+            --query SecretString --output text)
+          get() { echo "$SECRET" | jq -r ".$1 // empty"; }
+
+          # Mask sensitive values so they never appear in logs
+          mask() { echo "::add-mask::$1"; }
+
+          DB_URL=$(get DATABASE_URL);            mask "$DB_URL"
+          ANTHROPIC=$(get ANTHROPIC_API_KEY);    mask "$ANTHROPIC"
+          BUNQ_KEY=$(get BUNQ_API_KEY);          mask "$BUNQ_KEY"
+          BUNQ_INST=$(get BUNQ_INSTALLATION_TOKEN); mask "$BUNQ_INST"
+          BUNQ_PK=$(get BUNQ_PRIVATE_KEY);       mask "$BUNQ_PK"
+          BUNQ_UID=$(get BUNQ_USER_ID)
+          BUNQ_AID=$(get BUNQ_DEFAULT_MONETARY_ACCOUNT_ID)
+          # STORAGE_ENDPOINT is intentionally empty for real AWS S3
+          ST_AK=$(get STORAGE_ACCESS_KEY);       mask "$ST_AK"
+          ST_SK=$(get STORAGE_SECRET_KEY);       mask "$ST_SK"
+          ST_BK=$(get STORAGE_BUCKET)
+          ST_PU=$(get STORAGE_PUBLIC_URL)
+
+          echo "database_url=$DB_URL"               >> "$GITHUB_OUTPUT"
+          echo "anthropic_api_key=$ANTHROPIC"        >> "$GITHUB_OUTPUT"
+          echo "bunq_api_key=$BUNQ_KEY"              >> "$GITHUB_OUTPUT"
+          echo "bunq_installation_token=$BUNQ_INST"  >> "$GITHUB_OUTPUT"
+          echo "bunq_private_key=$BUNQ_PK"           >> "$GITHUB_OUTPUT"
+          echo "bunq_user_id=$BUNQ_UID"              >> "$GITHUB_OUTPUT"
+          echo "bunq_account_id=$BUNQ_AID"           >> "$GITHUB_OUTPUT"
+          echo "storage_access_key=$ST_AK"           >> "$GITHUB_OUTPUT"
+          echo "storage_secret_key=$ST_SK"           >> "$GITHUB_OUTPUT"
+          echo "storage_bucket=$ST_BK"               >> "$GITHUB_OUTPUT"
+          echo "storage_public_url=$ST_PU"           >> "$GITHUB_OUTPUT"
 
       - name: Update App Runner service
         env:
-          SERVICE_ARN:   ${{ secrets.BACKEND_APP_RUNNER_SERVICE_ARN }}
+          SERVICE_ARN:   ${{ needs.generate-env.outputs.backend_service_arn }}
           IMAGE:         ${{ needs.build-push-backend.outputs.image }}
           SESSION_TOKEN: ${{ needs.refresh-bunq-session.outputs.session_token }}
         run: |
@@ -234,20 +331,21 @@ jobs:
                 \"ImageConfiguration\": {
                   \"Port\": \"9191\",
                   \"RuntimeEnvironmentVariables\": {
-                    \"DATABASE_URL\":                       \"${{ secrets.DATABASE_URL }}\",
-                    \"ANTHROPIC_API_KEY\":                   \"${{ secrets.ANTHROPIC_API_KEY }}\",
-                    \"BUNQ_API_KEY\":                       \"${{ secrets.BUNQ_API_KEY }}\",
-                    \"BUNQ_INSTALLATION_TOKEN\":            \"${{ secrets.BUNQ_INSTALLATION_TOKEN }}\",
-                    \"BUNQ_PRIVATE_KEY\":                   \"${{ secrets.BUNQ_PRIVATE_KEY }}\",
+                    \"DATABASE_URL\":                       \"${{ steps.sm.outputs.database_url }}\",
+                    \"ANTHROPIC_API_KEY\":                  \"${{ steps.sm.outputs.anthropic_api_key }}\",
+                    \"BUNQ_API_KEY\":                       \"${{ steps.sm.outputs.bunq_api_key }}\",
+                    \"BUNQ_INSTALLATION_TOKEN\":             \"${{ steps.sm.outputs.bunq_installation_token }}\",
+                    \"BUNQ_PRIVATE_KEY\":                   \"${{ steps.sm.outputs.bunq_private_key }}\",
                     \"BUNQ_SESSION_TOKEN\":                  \"$SESSION_TOKEN\",
-                    \"BUNQ_USER_ID\":                       \"${{ secrets.BUNQ_USER_ID }}\",
-                    \"BUNQ_DEFAULT_MONETARY_ACCOUNT_ID\":   \"${{ secrets.BUNQ_ACCOUNT_ID }}\",
+                    \"BUNQ_USER_ID\":                       \"${{ steps.sm.outputs.bunq_user_id }}\",
+                    \"BUNQ_DEFAULT_MONETARY_ACCOUNT_ID\":   \"${{ steps.sm.outputs.bunq_account_id }}\",
                     \"BUNQ_USE_MOCK\":                      \"false\",
-                    \"STORAGE_ENDPOINT\":                    \"${{ secrets.STORAGE_ENDPOINT }}\",
-                    \"STORAGE_ACCESS_KEY\":                  \"${{ secrets.STORAGE_ACCESS_KEY }}\",
-                    \"STORAGE_SECRET_KEY\":                  \"${{ secrets.STORAGE_SECRET_KEY }}\",
-                    \"STORAGE_BUCKET\":                     \"${{ secrets.STORAGE_BUCKET }}\",
-                    \"STORAGE_PUBLIC_URL\":                 \"${{ secrets.STORAGE_PUBLIC_URL }}\",
+                    \"FRONTEND_ORIGIN\":                    \"${{ needs.generate-env.outputs.frontend_origin }}\",
+                    \"STORAGE_ENDPOINT\":                   \"\",
+                    \"STORAGE_ACCESS_KEY\":                 \"${{ steps.sm.outputs.storage_access_key }}\",
+                    \"STORAGE_SECRET_KEY\":                 \"${{ steps.sm.outputs.storage_secret_key }}\",
+                    \"STORAGE_BUCKET\":                     \"${{ steps.sm.outputs.storage_bucket }}\",
+                    \"STORAGE_PUBLIC_URL\":                 \"${{ steps.sm.outputs.storage_public_url }}\",
                     \"STORAGE_FORCE_PATH_STYLE\":           \"false\",
                     \"STORAGE_REGION\":                     \"${{ env.AWS_REGION }}\",
                     \"PORT\":                               \"9191\",
@@ -260,19 +358,32 @@ jobs:
   # ── 5. Deploy Mastra App Runner service ──────────────────────────────────
   deploy-mastra:
     name: Deploy Mastra to App Runner
-    needs: [build-push-mastra, refresh-bunq-session]
+    needs: [generate-env, build-push-mastra, refresh-bunq-session]
     runs-on: ubuntu-latest
     steps:
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - name: Fetch secrets for runtime env
+        id: sm
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id bunq/production \
+            --query SecretString --output text)
+          get() { echo "$SECRET" | jq -r ".$1 // empty"; }
+
+          DB_URL=$(get DATABASE_URL);         echo "::add-mask::$DB_URL"
+          ANTHROPIC=$(get ANTHROPIC_API_KEY); echo "::add-mask::$ANTHROPIC"
+
+          echo "database_url=$DB_URL"          >> "$GITHUB_OUTPUT"
+          echo "anthropic_api_key=$ANTHROPIC"  >> "$GITHUB_OUTPUT"
 
       - name: Update App Runner service
         env:
-          SERVICE_ARN: ${{ secrets.MASTRA_APP_RUNNER_SERVICE_ARN }}
+          SERVICE_ARN: ${{ needs.generate-env.outputs.mastra_service_arn }}
           IMAGE:       ${{ needs.build-push-mastra.outputs.image }}
         run: |
           aws apprunner update-service \
@@ -284,9 +395,9 @@ jobs:
                 \"ImageConfiguration\": {
                   \"Port\": \"4111\",
                   \"RuntimeEnvironmentVariables\": {
-                    \"DATABASE_URL\":       \"${{ secrets.DATABASE_URL }}\",
-                    \"ANTHROPIC_API_KEY\": \"${{ secrets.ANTHROPIC_API_KEY }}\",
-                    \"NODE_ENV\":          \"production\"
+                    \"DATABASE_URL\":       \"${{ steps.sm.outputs.database_url }}\",
+                    \"ANTHROPIC_API_KEY\":  \"${{ steps.sm.outputs.anthropic_api_key }}\",
+                    \"NODE_ENV\":           \"production\"
                   }
                 }
               }
