@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent'
-import { anthropic } from '@ai-sdk/anthropic'
+import { fastMastraModel } from '../models'
 
 export const INVITEE_OPTIMIZER_SYSTEM = `You are an audience targeting strategist for live events.
 
@@ -19,6 +19,6 @@ Return:
 export const inviteeOptimizerAgent = new Agent({
   id:           'invitee-optimizer',
   name:         'Invitee Optimization Agent',
-  model:        anthropic('claude-haiku-4-5-20251001'),
+  model:        fastMastraModel,
   instructions: INVITEE_OPTIMIZER_SYSTEM,
 })

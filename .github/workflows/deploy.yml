@@ -66,6 +66,8 @@ jobs:
             "PORT=9191" \
             "DATABASE_URL=$(get DATABASE_URL)" \
             "ANTHROPIC_API_KEY=$(get ANTHROPIC_API_KEY)" \
+            "MASTRA_MODEL=$(get MASTRA_MODEL)" \
+            "MASTRA_FAST_MODEL=$(get MASTRA_FAST_MODEL)" \
             "BUNQ_API_KEY=$(get BUNQ_API_KEY)" \
             "BUNQ_INSTALLATION_TOKEN=$(get BUNQ_INSTALLATION_TOKEN)" \
             "BUNQ_SESSION_TOKEN=$(get BUNQ_SESSION_TOKEN)" \
@@ -293,6 +295,8 @@ jobs:
 
           DB_URL=$(get DATABASE_URL);            mask "$DB_URL"
           ANTHROPIC=$(get ANTHROPIC_API_KEY);    mask "$ANTHROPIC"
+          MASTRA_MODEL=$(get MASTRA_MODEL)
+          MASTRA_FAST_MODEL=$(get MASTRA_FAST_MODEL)
           BUNQ_KEY=$(get BUNQ_API_KEY);          mask "$BUNQ_KEY"
           BUNQ_INST=$(get BUNQ_INSTALLATION_TOKEN); mask "$BUNQ_INST"
           BUNQ_PK=$(get BUNQ_PRIVATE_KEY);       mask "$BUNQ_PK"
@@ -306,6 +310,8 @@ jobs:
 
           echo "database_url=$DB_URL"               >> "$GITHUB_OUTPUT"
           echo "anthropic_api_key=$ANTHROPIC"        >> "$GITHUB_OUTPUT"
+          echo "mastra_model=$MASTRA_MODEL"          >> "$GITHUB_OUTPUT"
+          echo "mastra_fast_model=$MASTRA_FAST_MODEL" >> "$GITHUB_OUTPUT"
           echo "bunq_api_key=$BUNQ_KEY"              >> "$GITHUB_OUTPUT"
           echo "bunq_installation_token=$BUNQ_INST"  >> "$GITHUB_OUTPUT"
           echo "bunq_private_key=$BUNQ_PK"           >> "$GITHUB_OUTPUT"
@@ -333,6 +339,8 @@ jobs:
                   \"RuntimeEnvironmentVariables\": {
                     \"DATABASE_URL\":                       \"${{ steps.sm.outputs.database_url }}\",
                     \"ANTHROPIC_API_KEY\":                  \"${{ steps.sm.outputs.anthropic_api_key }}\",
+                    \"MASTRA_MODEL\":                       \"${{ steps.sm.outputs.mastra_model }}\",
+                    \"MASTRA_FAST_MODEL\":                  \"${{ steps.sm.outputs.mastra_fast_model }}\",
                     \"BUNQ_API_KEY\":                       \"${{ steps.sm.outputs.bunq_api_key }}\",
                     \"BUNQ_INSTALLATION_TOKEN\":             \"${{ steps.sm.outputs.bunq_installation_token }}\",
                     \"BUNQ_PRIVATE_KEY\":                   \"${{ steps.sm.outputs.bunq_private_key }}\",
@@ -377,9 +385,13 @@ jobs:
 
           DB_URL=$(get DATABASE_URL);         echo "::add-mask::$DB_URL"
           ANTHROPIC=$(get ANTHROPIC_API_KEY); echo "::add-mask::$ANTHROPIC"
+          MASTRA_MODEL=$(get MASTRA_MODEL)
+          MASTRA_FAST_MODEL=$(get MASTRA_FAST_MODEL)
 
           echo "database_url=$DB_URL"          >> "$GITHUB_OUTPUT"
           echo "anthropic_api_key=$ANTHROPIC"  >> "$GITHUB_OUTPUT"
+          echo "mastra_model=$MASTRA_MODEL"    >> "$GITHUB_OUTPUT"
+          echo "mastra_fast_model=$MASTRA_FAST_MODEL" >> "$GITHUB_OUTPUT"
 
       - name: Update App Runner service
         env:
@@ -397,6 +409,8 @@ jobs:
                   \"RuntimeEnvironmentVariables\": {
                     \"DATABASE_URL\":       \"${{ steps.sm.outputs.database_url }}\",
                     \"ANTHROPIC_API_KEY\":  \"${{ steps.sm.outputs.anthropic_api_key }}\",
+                    \"MASTRA_MODEL\":       \"${{ steps.sm.outputs.mastra_model }}\",
+                    \"MASTRA_FAST_MODEL\":  \"${{ steps.sm.outputs.mastra_fast_model }}\",
                     \"NODE_ENV\":           \"production\"
                   }
                 }

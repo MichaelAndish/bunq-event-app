@@ -33,19 +33,47 @@ die()   { echo -e "${RED}❌ $*${RESET}" >&2; exit 1; }
 # ── argument parsing ─────────────────────────────────────────────────────────
 SKIP_FRONTEND=false
 SKIP_BACKEND=false
+SKIP_MASTRA=false
 SKIP_SESSION=false
+INTERACTIVE=false
+
+if [[ $# -eq 0 ]]; then
+  INTERACTIVE=true
+fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-frontend) SKIP_FRONTEND=true; shift ;;
     --skip-backend)  SKIP_BACKEND=true;  shift ;;
+    --skip-mastra)   SKIP_MASTRA=true;   shift ;;
     --skip-session)  SKIP_SESSION=true;  shift ;;
+    --interactive|-i) INTERACTIVE=true; shift ;;
     --help|-h)
-      echo "Usage: bash scripts/deploy.sh [--skip-frontend] [--skip-backend] [--skip-session]"
+      echo "Usage: bash scripts/deploy.sh [--skip-frontend] [--skip-backend] [--skip-mastra] [--skip-session] [--interactive|-i]"
       exit 0 ;;
     *) die "Unknown argument: $1" ;;
   esac
 done
+
+if [[ "$INTERACTIVE" == true ]]; then
+  echo -e "\n${CYAN}What would you like to build and deploy?${RESET}"
+  echo "1) All services (Frontend, Backend, Mastra)"
+  echo "2) Frontend only"
+  echo "3) Backend only"
+  echo "4) Mastra only"
+  echo "5) Backend & Mastra only"
+  echo "q) Quit"
+  read -p "Select an option [1-5, q]: " OPTION
+  case "$OPTION" in
+    1) ;; # defaults are false
+    2) SKIP_BACKEND=true; SKIP_MASTRA=true ;;
+    3) SKIP_FRONTEND=true; SKIP_MASTRA=true ;;
+    4) SKIP_FRONTEND=true; SKIP_BACKEND=true ;;
+    5) SKIP_FRONTEND=true ;;
+    q|Q) echo "Aborted."; exit 0 ;;
+    *) die "Invalid option" ;;
+  esac
+fi
 
 # ── dependency checks ────────────────────────────────────────────────────────
 for cmd in aws docker node jq; do
@@ -110,6 +138,8 @@ printf '%s\n' \
   "PORT=9191" \
   "DATABASE_URL=$(get DATABASE_URL)" \
   "ANTHROPIC_API_KEY=$(get ANTHROPIC_API_KEY)" \
+  "MASTRA_MODEL=$(get MASTRA_MODEL)" \
+  "MASTRA_FAST_MODEL=$(get MASTRA_FAST_MODEL)" \
   "BUNQ_API_KEY=$(get BUNQ_API_KEY)" \
   "BUNQ_INSTALLATION_TOKEN=$(get BUNQ_INSTALLATION_TOKEN)" \
   "BUNQ_SESSION_TOKEN=$(get BUNQ_SESSION_TOKEN)" \
@@ -168,7 +198,6 @@ ok "ECR login successful"
 SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "local-$(date +%s)")
 
 if [[ "$SKIP_BACKEND" == false ]]; then
-  # ── backend ────────────────────────────────────────────────────────────────
   step "Building backend image  →  $BACKEND_ECR:$SHA"
   cp "$ENV_FILE" backend/.env
   docker build -f backend/Dockerfile.prod \
@@ -178,8 +207,11 @@ if [[ "$SKIP_BACKEND" == false ]]; then
   docker push "$BACKEND_ECR:$SHA"
   docker push "$BACKEND_ECR:latest"
   ok "Backend image pushed"
+else
+  warn "Skipping backend image build (--skip-backend)"
+fi
 
-  # ── mastra ─────────────────────────────────────────────────────────────────
+if [[ "$SKIP_MASTRA" == false ]]; then
   step "Building Mastra image  →  $MASTRA_ECR:$SHA"
   docker build -f backend/Dockerfile.mastra \
     -t "$MASTRA_ECR:$SHA" \
@@ -189,9 +221,7 @@ if [[ "$SKIP_BACKEND" == false ]]; then
   docker push "$MASTRA_ECR:latest"
   ok "Mastra image pushed"
 else
-  warn "Skipping backend/mastra image build (--skip-backend)"
-  # Derive SHA-tagged image from latest if skipping build
-  SHA="latest"
+  warn "Skipping Mastra image build (--skip-mastra)"
 fi
 
 # ── deploy frontend → S3 + CloudFront ────────────────────────────────────────
@@ -240,6 +270,8 @@ if [[ "$SKIP_BACKEND" == false ]]; then
           \"RuntimeEnvironmentVariables\": {
             \"DATABASE_URL\":                       \"$(get DATABASE_URL)\",
             \"ANTHROPIC_API_KEY\":                  \"$(get ANTHROPIC_API_KEY)\",
+            \"MASTRA_MODEL\":                       \"$(get MASTRA_MODEL)\",
+            \"MASTRA_FAST_MODEL\":                  \"$(get MASTRA_FAST_MODEL)\",
             \"BUNQ_API_KEY\":                       \"$(get BUNQ_API_KEY)\",
             \"BUNQ_INSTALLATION_TOKEN\":             \"$(get BUNQ_INSTALLATION_TOKEN)\",
             \"BUNQ_PRIVATE_KEY\":                   \"$(get BUNQ_PRIVATE_KEY)\",
@@ -262,7 +294,9 @@ if [[ "$SKIP_BACKEND" == false ]]; then
       }
     }" > /dev/null
   ok "Backend App Runner updated"
+fi
 
+if [[ "$SKIP_MASTRA" == false ]]; then
   step "Updating Mastra App Runner service"
   aws apprunner update-service \
     --service-arn "$MASTRA_SERVICE_ARN" \
@@ -276,6 +310,8 @@ if [[ "$SKIP_BACKEND" == false ]]; then
           \"RuntimeEnvironmentVariables\": {
             \"DATABASE_URL\":      \"$(get DATABASE_URL)\",
             \"ANTHROPIC_API_KEY\": \"$(get ANTHROPIC_API_KEY)\",
+            \"MASTRA_MODEL\":      \"$(get MASTRA_MODEL)\",
+            \"MASTRA_FAST_MODEL\": \"$(get MASTRA_FAST_MODEL)\",
             \"NODE_ENV\":          \"production\"
           }
         }

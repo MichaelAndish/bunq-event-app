@@ -11,12 +11,12 @@ export const EventDraftSchema = z.object({
   date:        z.string().describe('Human-friendly date, e.g. "Sat, 25 Apr • 14:00"'),
   location:    z.string().describe('City and country or venue name'),
   description: z.string().describe('Short event description, 1-2 sentences'),
-  ticketTiers: z.array(TicketTierSchema).min(1),
+  ticketTiers: z.array(TicketTierSchema).describe('At least one ticket tier'),
 })
 
 export const ExtractionResultSchema = z.object({
   draft:      EventDraftSchema.partial(),
-  confidence: z.number().min(0).max(1).describe('0 = nothing extracted, 1 = fully confident'),
+  confidence: z.number().describe('Confidence between 0 and 1, where 0 = nothing extracted, 1 = fully confident'),
   reasoning:  z.string().describe('Why this confidence score was given'),
 })
 

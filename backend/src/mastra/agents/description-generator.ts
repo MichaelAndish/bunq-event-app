@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent'
-import { anthropic } from '@ai-sdk/anthropic'
+import { fastMastraModel } from '../models'
 
 export const DESCRIPTION_GENERATOR_SYSTEM = `You are a copywriter for bunq, a modern digital bank. Write compelling, energetic event descriptions.
 
@@ -20,6 +20,6 @@ Return:
 export const descriptionGeneratorAgent = new Agent({
   id:           'description-generator',
   name:         'Event Description Generator Agent',
-  model:        anthropic('claude-haiku-4-5-20251001'),
+  model:        fastMastraModel,
   instructions: DESCRIPTION_GENERATOR_SYSTEM,
 })

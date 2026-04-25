@@ -46,6 +46,8 @@ fi
 # Build the JSON secret payload
 SECRET_JSON=$(jq -n \
   --arg anthropic_api_key     "$(read_env ANTHROPIC_API_KEY)" \
+  --arg mastra_model          "$(read_env MASTRA_MODEL)" \
+  --arg mastra_fast_model     "$(read_env MASTRA_FAST_MODEL)" \
   --arg bunq_api_key          "$(read_env BUNQ_API_KEY)" \
   --arg bunq_installation_token "$(read_env BUNQ_INSTALLATION_TOKEN)" \
   --arg bunq_session_token    "$(read_env BUNQ_SESSION_TOKEN)" \
@@ -61,6 +63,8 @@ SECRET_JSON=$(jq -n \
   --arg storage_region        "$(read_env STORAGE_REGION)" \
   '{
     ANTHROPIC_API_KEY:          $anthropic_api_key,
+    MASTRA_MODEL:               $mastra_model,
+    MASTRA_FAST_MODEL:          $mastra_fast_model,
     BUNQ_API_KEY:               $bunq_api_key,
     BUNQ_INSTALLATION_TOKEN:    $bunq_installation_token,
     BUNQ_SESSION_TOKEN:         $bunq_session_token,

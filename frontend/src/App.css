@@ -529,6 +529,16 @@ body {
   margin-top: 2px;
 }
 
+/* ── Venue Detail Text (AI-generated) ────────────── */
+.venue-detail-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  background: var(--bg-elevated);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
 /* ── Form Fields ─────────────────────────────────────── */
 .field-group {
   margin-bottom: 14px;
@@ -566,6 +576,14 @@ body {
 .field-input:focus { box-shadow: 0 0 0 2px var(--blue); }
 .field-input.has-icon-left  { padding-left: 38px; }
 .field-input.has-icon-right { padding-right: 38px; }
+
+.field-textarea {
+  resize: vertical;
+  min-height: 60px;
+  max-height: 160px;
+  line-height: 1.5;
+  font-family: inherit;
+}
 
 .field-icon-left,
 .field-icon-right {

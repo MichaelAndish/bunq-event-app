@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import TopBar from '../components/TopBar'
 import { SparklesIcon, MicIcon, StopIcon, XIcon } from '../components/Icons'
 import type { Page, EventDraft } from '../App'
+import { BASE } from '../api/client'
 
 type Props = {
   onBack: () => void
@@ -214,7 +215,7 @@ export default function AICreateEvent({ onBack, onNavigate, setDraft }: Props) {
         .filter((m): m is VoiceMessage => m.kind === 'voice')
         .forEach((m, i) => body.append('files', m.blob, `voice-${i}.webm`))
 
-      const res = await fetch('/api/agent/analyze-venue', { method: 'POST', body })
+      const res = await fetch(`${BASE}/agent/analyze-venue`, { method: 'POST', body })
       if (!res.ok) throw new Error(await res.text())
 
       const data = await res.json()

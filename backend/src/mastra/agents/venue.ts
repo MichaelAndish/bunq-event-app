@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent'
-import { anthropic } from '@ai-sdk/anthropic'
 import { createEventTool } from '../tools/events'
+import { defaultMastraModel } from '../models'
 
 // Re-export from shared schema for backwards compat
 export { EventDraftSchema, type EventDraft } from '../schemas/event'
@@ -15,7 +15,7 @@ Format dates as human-friendly text like "Sat, 25 Apr • 20:00".`
 export const venueAgent = new Agent({
   id:           'venue-analysis',
   name:         'Venue Analysis Agent',
-  model:        anthropic('claude-sonnet-4-5-20250514'),
+  model:        defaultMastraModel,
   instructions: INSTRUCTIONS,
   tools:        { createEventTool },
 })

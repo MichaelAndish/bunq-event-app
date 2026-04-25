@@ -143,7 +143,14 @@ export async function orchestrateEventCreation(
     .map(r => r.value)
 
   if (successful.length === 0) {
-    throw new Error('All extractors failed — no event information could be extracted')
+    const reasons = settled
+      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      .map((r, index) => {
+        const reason = r.reason instanceof Error ? r.reason.message : String(r.reason)
+        return `[extractor-${index + 1}] ${reason}`
+      })
+      .join('; ')
+    throw new Error(`All extractors failed — no event information could be extracted. ${reasons}`)
   }
 
   // Phase 2: merge results

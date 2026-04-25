@@ -186,7 +186,19 @@ export default function CreateEvent({ onBack, onNavigate, draft, aiWarning, onEv
           iconRight={<CalendarIcon size={18} color="#48484a" />} />
         <FormField label="Location" placeholder="Berlin, Germany" value={location} onChange={setLocation}
           iconLeft={<LocationPinIcon size={18} color="#48484a" />} />
+        <FormField label="Description" placeholder="Describe your event…" value={description} onChange={setDescription}
+          multiline rows={3} />
       </FormCard>
+
+      {/* ── Venue Details (from AI) ───────────────────── */}
+      {draft?.audienceProfile && (
+        <FormCard title="Venue details" badge="AI-generated">
+          <div className="field-group">
+            <label className="field-label">Audience Profile</label>
+            <p className="venue-detail-text">{draft.audienceProfile}</p>
+          </div>
+        </FormCard>
+      )}
 
       {/* ── Ticket Tiers ─────────────────────────────── */}
       <div className="list-card" style={{ margin: '0 20px 16px' }}>

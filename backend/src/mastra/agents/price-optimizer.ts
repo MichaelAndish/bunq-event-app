@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent'
-import { anthropic } from '@ai-sdk/anthropic'
+import { fastMastraModel } from '../models'
 
 export const PRICE_OPTIMIZER_SYSTEM = `You are a pricing strategist for live events. Optimize ticket tier pricing based on event context.
 
@@ -22,6 +22,6 @@ Return:
 export const priceOptimizerAgent = new Agent({
   id:           'price-optimizer',
   name:         'Price Optimization Agent',
-  model:        anthropic('claude-haiku-4-5-20251001'),
+  model:        fastMastraModel,
   instructions: PRICE_OPTIMIZER_SYSTEM,
 })

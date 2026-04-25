@@ -14,6 +14,8 @@ const schema = z.object({
   PORT:                z.coerce.number().default(9191),
   DATABASE_URL:        z.string().url('DATABASE_URL must be a valid connection string'),
   ANTHROPIC_API_KEY:   z.string().default(''),
+  MASTRA_MODEL:        z.string().default('claude-sonnet-4-6'),
+  MASTRA_FAST_MODEL:   z.string().default('claude-haiku-4-5'),
   BUNQ_USE_MOCK:       z.preprocess(v => String(v) === 'true', z.boolean()).default(false),
   BUNQ_API_KEY:        z.string().default(''),
   BUNQ_API_BASE_URL:   z.string().url().default('https://public-api.sandbox.bunq.com/v1'),
