@@ -36,6 +36,7 @@ export type EventDraft = {
   mediaFiles?: File[]
   audienceProfile?: string
   imagePrompt?: string
+  bannerUrl?: string
   lowConfidence?: boolean
 }
 

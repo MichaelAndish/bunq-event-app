@@ -47,8 +47,8 @@ export default function CreateEvent({ onBack, onNavigate, draft, aiWarning, onEv
     closeSheet()
   }
 
-  // Banner image — track both preview URL and actual File for upload
-  const [bannerUrl,  setBannerUrl]  = useState<string | null>(null)
+  // Banner image — pre-populate from AI draft URL or user selection
+  const [bannerUrl,  setBannerUrl]  = useState<string | null>(draft?.bannerUrl ?? null)
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
 
@@ -96,6 +96,8 @@ export default function CreateEvent({ onBack, onNavigate, draft, aiWarning, onEv
         location,
         description,
         ticketTiers: tiers.map(({ id, name, price }) => ({ id, name, price })),
+        // Pass through existing bannerUrl if user didn't upload a new one
+        ...(bannerUrl && !bannerFile && { bannerUrl }),
       }))
       if (bannerFile) formData.append('banner', bannerFile)
       mediaFileObjs.forEach(f => formData.append('media', f))

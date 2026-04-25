@@ -22,10 +22,11 @@ const TierSchema = z.object({
 
 const DraftSchema = z.object({
   name:        z.string().min(1),
-  date:        z.string().min(1),
-  location:    z.string().min(1),
+  date:        z.string().default(''),
+  location:    z.string().default(''),
   description: z.string().default(''),
   creatorId:   z.string().uuid().optional(),
+  bannerUrl:   z.string().url().optional(),
   ticketTiers: z.array(TierSchema).default([]),
 })
 
@@ -142,6 +143,8 @@ router.post('/', async (c) => {
       .map(r => r.value)
 
     const { data: d } = draft
+    // Use uploaded file URL first; fall back to pre-uploaded URL passed from AI step
+    const bannerUrl = uploadedUrls[0] ?? d.bannerUrl
     await db.insert(events).values({
       id:          eventId,
       creatorId:   d.creatorId,
@@ -149,7 +152,7 @@ router.post('/', async (c) => {
       date:        d.date,
       location:    d.location,
       description: d.description,
-      bannerUrl:   uploadedUrls[0],
+      bannerUrl,
     })
 
     if (d.ticketTiers.length > 0) {

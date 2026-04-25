@@ -11,6 +11,8 @@ Confidence scoring:
 - 0.3–0.5: Unclear audio or only partial details mentioned
 - 0.0–0.2: Cannot understand speech or no event details mentioned
 
+IMPORTANT: Omit any field you cannot determine — never output "Unknown", "N/A", "TBD", or placeholder text.
+
 Return:
 {
   "draft": { "name": "...", "date": "...", "location": "...", "description": "...", "ticketTiers": [...] },

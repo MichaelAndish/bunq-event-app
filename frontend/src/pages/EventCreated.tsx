@@ -69,9 +69,9 @@ export default function EventCreated({ mock, eventId, onNavigate }: Props) {
       .finally(() => setLoading(false))
   }, [mock, eventId])
 
-  const displayName     = mock ? 'bunq demo day'       : (event?.name     ?? '—')
-  const displayDate     = mock ? 'Sat, 25 Apr • 14:00' : (event?.date     ?? '—')
-  const displayLocation = mock ? 'bunq HQ'             : (event?.location ?? '—')
+  const displayName     = mock ? 'bunq demo day'       : (event?.name     ?? '')
+  const displayDate     = mock ? 'Sat, 25 Apr • 14:00' : (event?.date     ?? '')
+  const displayLocation = mock ? 'bunq HQ'             : (event?.location ?? '')
 
   if (!mock && !eventId) return (
     <div>

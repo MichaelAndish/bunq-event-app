@@ -13,6 +13,7 @@ Confidence scoring:
 
 Always use € for prices unless the venue strongly implies a different market.
 Format dates as "Sat, 25 Apr • 20:00" style human-friendly text.
+IMPORTANT: Omit any field you cannot determine — never output "Unknown", "N/A", "TBD", or placeholder text.
 
 Return:
 {

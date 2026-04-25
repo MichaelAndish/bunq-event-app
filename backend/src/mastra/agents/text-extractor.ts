@@ -12,6 +12,7 @@ Confidence scoring:
 - 0.0–0.2: Barely any event details; text is off-topic
 
 Always use € for prices. Format dates as "Sat, 25 Apr • 20:00" human-friendly text.
+IMPORTANT: Omit any field you cannot determine — never output "Unknown", "N/A", "TBD", or placeholder text.
 
 Return:
 {

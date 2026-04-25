@@ -217,8 +217,9 @@ export default function AICreateEvent({ onBack, onNavigate, setDraft }: Props) {
       const res = await fetch('/api/agent/analyze-venue', { method: 'POST', body })
       if (!res.ok) throw new Error(await res.text())
 
-      const draft: EventDraft = await res.json()
-      setDraft({ ...draft, mediaFiles: files.map(f => f.file) })
+      const data = await res.json()
+      const draft: EventDraft = { ...data, mediaFiles: files.map(f => f.file) }
+      setDraft(draft)
       onNavigate('create-event')
     } catch {
       setError('AI analysis failed. Please try again.')
