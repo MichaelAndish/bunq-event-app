@@ -4,19 +4,19 @@ Imagine you are a festival organizer.
 
 Your biggest problem is ticketing companies hide your customer data. 
 
-You sold 10,000 tickets and have no idea who bought them, who spent the most and what they bought. 
+You sold 10,000 tickets and have no idea who bought them, who spent the most and what did they buy when. 
 
 With bunq events, you tap a button on the home screen of the bunq app and you are in control of events. 
 
-Build a beautiful event page automatically to sell the experience, gather financial data from attendees and understand their behaviour. 
+Build an event page with AI, invite people, gather attendee data and understand their behaviour. 
 
-Now, you can optimise your next event for the best price, clients, and behaviours.
+Now, you can optimise your next event for the best clients, price, and behaviours.
 
-The idea also works for casual events.
+The idea works also for casual events.
 
-Create a pizza night, invite your friends and track and split automatically so everyone is treated fairly. 
+Create a pizza night event, invite your friends and split exenses fairly with AI.
 
-From huge festivals to cozy nights, bunq events give you the financial intelligence you need to create events.
+bunq events give you financial intelligence to create impactful events.
 
 ---
 
