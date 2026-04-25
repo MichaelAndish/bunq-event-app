@@ -25,6 +25,6 @@ Return:
 export const imageExtractorAgent = new Agent({
   id:           'image-extractor',
   name:         'Image Extractor Agent',
-  model:        anthropic('claude-opus-4-7'),
+  model:        anthropic('claude-sonnet-4-5-20250514'),
   instructions: IMAGE_EXTRACTOR_SYSTEM,
 })

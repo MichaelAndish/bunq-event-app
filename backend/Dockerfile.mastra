@@ -1,4 +1,4 @@
-# ── Stage 1: build (needs devDeps for TypeScript + mastra build) ─────────────
+# ── Stage 1: install all deps (including devDeps for mastra dev) ──────────────
 FROM node:22-alpine AS build
 
 WORKDIR /app
@@ -6,25 +6,22 @@ COPY package*.json ./
 RUN npm ci --production=false
 COPY . .
 
-# Compile the Mastra application for production
-RUN npx mastra build --dir src/mastra
-
-# ── Stage 2: runtime ─────────────────────────────────────────────────────────
+# ── Stage 2: runtime (mastra dev requires full source + devDeps for playground UI)
 FROM node:22-alpine AS runtime
 
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-
-# Copy only the compiled Mastra output (no TypeScript source needed)
-COPY --from=build /app/.mastra ./.mastra
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/src ./src
+COPY --from=build /app/tsconfig.json ./tsconfig.json
 
 # Do NOT COPY .env* — all env vars are injected at runtime via App Runner
-# RuntimeEnvironmentVariables (or docker-compose env_file for local dev).
 
 EXPOSE 4111
 ENV PORT=4111
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 
-# Production: run the compiled Mastra server directly
-CMD ["node", ".mastra/output/index.mjs"]
+# mastra dev is required for the playground UI (agent chat, workflow viewer)
+# The production build (mastra build → node .mastra/output/index.mjs) only
+# serves API endpoints without the interactive playground.
+CMD ["npx", "mastra", "dev", "--dir", "src/mastra"]

@@ -23,6 +23,6 @@ Return:
 export const voiceExtractorAgent = new Agent({
   id:           'voice-extractor',
   name:         'Voice Extractor Agent',
-  model:        anthropic('claude-opus-4-7'),
+  model:        anthropic('claude-sonnet-4-5-20250514'),
   instructions: VOICE_EXTRACTOR_SYSTEM,
 })
