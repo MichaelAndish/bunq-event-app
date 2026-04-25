@@ -20,7 +20,7 @@ From huge festivals to cozy nights, bunq events the financial intelligence you
 
 ---
 
-## How it works
+## Benefits
 
 For Business Organizers
 - Simplify events & payments. 
