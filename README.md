@@ -4,7 +4,7 @@ Imagine you are a festival organizer.
 
 Your biggest problem is ticketing companies hide your customer data. 
 
-You sold 10,000 tickets and have no idea who bought them, who spent the most and what did they buy when. 
+You sold 10,000 tickets and have no idea who bought them, who spent the most or when did they buy most. 
 
 With bunq events, you tap a button on the home screen of the bunq app and you are in control of events. 
 
