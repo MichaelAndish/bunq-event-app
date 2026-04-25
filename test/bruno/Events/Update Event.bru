@@ -1,0 +1,57 @@
+meta {
+  name: Update Event
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/events/{{eventId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Neon Nights — Sold Out Edition",
+    "status": "live",
+    "tiers": [
+      {
+        "name": "General Admission",
+        "price": "€35.00",
+        "currency": "EUR"
+      },
+      {
+        "name": "VIP Table",
+        "price": "€200.00",
+        "currency": "EUR"
+      },
+      {
+        "name": "Early Bird",
+        "price": "€20.00",
+        "currency": "EUR"
+      }
+    ]
+  }
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("name is updated", function () {
+    expect(res.body.name).to.equal("Neon Nights — Sold Out Edition");
+  });
+
+  test("status is updated to live", function () {
+    expect(res.body.status).to.equal("live");
+  });
+
+  test("tiers are replaced", function () {
+    expect(res.body.tiers).to.be.an("array").with.lengthOf(3);
+  });
+}

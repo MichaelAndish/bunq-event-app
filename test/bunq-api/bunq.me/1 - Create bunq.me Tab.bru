@@ -1,0 +1,63 @@
+meta {
+  name: Create bunq.me Tab
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/bunqme-tab
+  body: json
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: bunqme-create-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  Content-Type: application/json
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+body:json {
+  {
+    "bunqme_tab_entry": {
+      "amount_inquired": {
+        "value": "25.00",
+        "currency": "EUR"
+      },
+      "description": "Rooftop Summer Sessions — General Admission"
+    },
+    "status": "OPEN"
+  }
+}
+
+script:post-response {
+  const body = res.body;
+  if (body && body.Response) {
+    const idObj = body.Response.find(r => r.Id);
+    if (idObj) {
+      bru.setEnvVar("tabUuid", String(idObj.Id.id));
+      console.log("Saved tabUuid:", idObj.Id.id);
+    }
+  }
+}
+
+docs {
+  Creates a bunq.me tab — a public payment link that anyone can pay without a bunq account.
+  The tab URL follows the pattern: https://bunq.me/{alias}/{amount}/{description}
+  Useful for event ticket sales.
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("tab created with Id", function () {
+    const idObj = res.body.Response.find(r => r.Id);
+    expect(idObj).to.exist;
+    expect(idObj.Id.id).to.be.a("number");
+  });
+}

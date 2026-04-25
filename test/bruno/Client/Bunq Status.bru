@@ -1,0 +1,26 @@
+meta {
+  name: Bunq Status
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/client/status
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("has connected field", function () {
+    expect(res.body).to.have.property("connected");
+    expect(res.body.connected).to.be.a("boolean");
+  });
+
+  test("has baseUrl field", function () {
+    expect(res.body).to.have.property("baseUrl");
+  });
+}

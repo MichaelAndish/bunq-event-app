@@ -1,0 +1,39 @@
+meta {
+  name: Get Monetary Account
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: get-account-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response has MonetaryAccountBank", function () {
+    const account = res.body.Response[0].MonetaryAccountBank;
+    expect(account).to.exist;
+    expect(account).to.have.property("id");
+    expect(account).to.have.property("description");
+    expect(account).to.have.property("balance");
+  });
+
+  test("account is ACTIVE", function () {
+    const account = res.body.Response[0].MonetaryAccountBank;
+    expect(account.status).to.equal("ACTIVE");
+  });
+}

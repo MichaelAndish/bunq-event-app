@@ -1,0 +1,35 @@
+meta {
+  name: Agent Status
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/agent/status
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("agents list is present", function () {
+    expect(res.body).to.have.property("agents");
+    expect(res.body.agents).to.be.an("array");
+  });
+
+  test("venueAgent is registered", function () {
+    expect(res.body.agents).to.include("venueAgent");
+  });
+
+  test("workflows list is present", function () {
+    expect(res.body).to.have.property("workflows");
+    expect(res.body.workflows).to.be.an("array");
+  });
+
+  test("createEventWorkflow is registered", function () {
+    expect(res.body.workflows).to.include("createEventWorkflow");
+  });
+}

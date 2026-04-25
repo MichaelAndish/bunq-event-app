@@ -1,0 +1,87 @@
+meta {
+  name: Create Batch Payment
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/payment-batch
+  body: json
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: payment-batch-{{$timestamp}}
+  X-Bunq-Client-Signature: {{requestSignature}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  Content-Type: application/json
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+body:json {
+  {
+    "payments": [
+      {
+        "amount": { "value": "5.00", "currency": "EUR" },
+        "counterparty_alias": {
+          "type": "IBAN",
+          "value": "{{counterpartyIban}}",
+          "name": "{{counterpartyName}}"
+        },
+        "description": "Batch payment item 1"
+      },
+      {
+        "amount": { "value": "3.50", "currency": "EUR" },
+        "counterparty_alias": {
+          "type": "IBAN",
+          "value": "{{counterpartyIban}}",
+          "name": "{{counterpartyName}}"
+        },
+        "description": "Batch payment item 2"
+      }
+    ]
+  }
+}
+
+script:pre-request {
+  const crypto = require("crypto");
+
+  const privateKeyPem = bru.getEnvVar("privateKeyPem");
+  if (!privateKeyPem || privateKeyPem.trim().length === 0) {
+    bru.setEnvVar("requestSignature", "");
+    console.warn("No private key — signature skipped.");
+  } else {
+    const payments = [
+      {
+        amount: { value: "5.00", currency: "EUR" },
+        counterparty_alias: { type: "IBAN", value: bru.getEnvVar("counterpartyIban"), name: bru.getEnvVar("counterpartyName") },
+        description: "Batch payment item 1",
+      },
+      {
+        amount: { value: "3.50", currency: "EUR" },
+        counterparty_alias: { type: "IBAN", value: bru.getEnvVar("counterpartyIban"), name: bru.getEnvVar("counterpartyName") },
+        description: "Batch payment item 2",
+      },
+    ];
+    const bodyStr = JSON.stringify({ payments });
+    const sign = crypto.createSign("SHA256");
+    sign.update(bodyStr);
+    sign.end();
+    bru.setEnvVar("requestSignature", sign.sign(privateKeyPem, "base64"));
+    console.log("Batch payment signature generated.");
+  }
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("batch payment has Id", function () {
+    const idObj = res.body.Response.find(r => r.Id);
+    expect(idObj).to.exist;
+  });
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Get Request Inquiry
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/request-inquiry/{{requestInquiryId}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: get-inquiry-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("inquiry has status", function () {
+    const inquiry = res.body.Response[0].RequestInquiry;
+    expect(inquiry).to.exist;
+    expect(inquiry).to.have.property("status");
+    expect(["PENDING", "ACCEPTED", "REJECTED", "REVOKED", "EXPIRED"]).to.include(inquiry.status);
+  });
+}

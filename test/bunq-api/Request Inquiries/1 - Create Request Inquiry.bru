@@ -1,0 +1,60 @@
+meta {
+  name: Create Request Inquiry
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/request-inquiry
+  body: json
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: request-inquiry-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  Content-Type: application/json
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+body:json {
+  {
+    "amount_inquired": {
+      "value": "25.00",
+      "currency": "EUR"
+    },
+    "counterparty_alias": {
+      "type": "EMAIL",
+      "value": "sugardaddy@bunq.com",
+      "name": "Sugar Daddy"
+    },
+    "description": "Request for event ticket payment",
+    "allow_bunqme": true
+  }
+}
+
+script:post-response {
+  const body = res.body;
+  if (body && body.Response) {
+    const idObj = body.Response.find(r => r.Id);
+    if (idObj) {
+      bru.setEnvVar("requestInquiryId", String(idObj.Id.id));
+      console.log("Saved requestInquiryId:", idObj.Id.id);
+    }
+  }
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("inquiry created with Id", function () {
+    const idObj = res.body.Response.find(r => r.Id);
+    expect(idObj).to.exist;
+    expect(idObj.Id.id).to.be.a("number");
+  });
+}

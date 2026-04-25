@@ -1,0 +1,86 @@
+meta {
+  name: Create Payment
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/payment
+  body: json
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: payment-{{$timestamp}}
+  X-Bunq-Client-Signature: {{requestSignature}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  Content-Type: application/json
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+body:json {
+  {
+    "amount": {
+      "value": "10.00",
+      "currency": "EUR"
+    },
+    "counterparty_alias": {
+      "type": "IBAN",
+      "value": "{{counterpartyIban}}",
+      "name": "{{counterpartyName}}"
+    },
+    "description": "Test payment from Bruno collection"
+  }
+}
+
+script:pre-request {
+  const crypto = require("crypto");
+
+  const privateKeyPem = bru.getEnvVar("privateKeyPem");
+  if (!privateKeyPem || privateKeyPem.trim().length === 0) {
+    console.warn("privateKeyPem not set — skipping signature. Payment may fail with error 466.");
+    bru.setEnvVar("requestSignature", "");
+  } else {
+    const bodyStr = JSON.stringify({
+      amount: { value: "10.00", currency: "EUR" },
+      counterparty_alias: {
+        type: "IBAN",
+        value: bru.getEnvVar("counterpartyIban"),
+        name: bru.getEnvVar("counterpartyName"),
+      },
+      description: "Test payment from Bruno collection",
+    });
+
+    const sign = crypto.createSign("SHA256");
+    sign.update(bodyStr);
+    sign.end();
+    const signature = sign.sign(privateKeyPem, "base64");
+    bru.setEnvVar("requestSignature", signature);
+    console.log("RSA signature generated:", signature.slice(0, 30) + "...");
+  }
+}
+
+docs {
+  Bunq requires an RSA signature (X-Bunq-Client-Signature) on Payment endpoints.
+  Run "Generate Key Pair" first (step 3 in Setup), then "Create Installation" with
+  that public key so Bunq can verify the signature.
+
+  The pre-request script signs the request body with your private key.
+  Run Bruno with: bru run --env Sandbox --sandbox=developer
+  (--sandbox=developer is required to use require('crypto') in scripts)
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("payment has an Id", function () {
+    const idObj = res.body.Response.find(r => r.Id);
+    expect(idObj).to.exist;
+    expect(idObj.Id.id).to.be.a("number");
+  });
+}

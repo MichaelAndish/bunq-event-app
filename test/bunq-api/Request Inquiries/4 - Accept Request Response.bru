@@ -1,0 +1,43 @@
+meta {
+  name: Accept Request Response (Sandbox)
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/request-response/{{requestInquiryId}}
+  body: json
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: accept-inquiry-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  Content-Type: application/json
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+body:json {
+  {
+    "status": "ACCEPTED"
+  }
+}
+
+docs {
+  In sandbox, you can accept a request response directly.
+  In production this would be done by the counterparty.
+  Make sure requestInquiryId is set (saved automatically by "Create Request Inquiry").
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response updated", function () {
+    expect(res.body.Response).to.be.an("array");
+  });
+}

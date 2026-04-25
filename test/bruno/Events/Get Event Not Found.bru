@@ -1,0 +1,21 @@
+meta {
+  name: Get Event Not Found
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/events/00000000-0000-0000-0000-000000000000
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 404", function () {
+    expect(res.status).to.equal(404);
+  });
+
+  test("error message present", function () {
+    expect(res.body).to.have.property("error");
+  });
+}

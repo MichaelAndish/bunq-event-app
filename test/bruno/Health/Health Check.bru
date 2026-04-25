@@ -1,0 +1,33 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("status is ok or degraded", function () {
+    expect(["ok", "degraded"]).to.include(res.body.status);
+  });
+
+  test("has db field", function () {
+    expect(res.body).to.have.property("db");
+  });
+
+  test("has ai field", function () {
+    expect(res.body).to.have.property("ai");
+  });
+
+  test("has bunq field", function () {
+    expect(res.body).to.have.property("bunq");
+  });
+}

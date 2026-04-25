@@ -1,0 +1,47 @@
+meta {
+  name: List Payments
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/payment
+  body: none
+  auth: none
+}
+
+params:query {
+  count: 10
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: list-payments-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response is an array", function () {
+    expect(res.body.Response).to.be.an("array");
+  });
+
+  test("each payment has required fields", function () {
+    res.body.Response.forEach(function (item) {
+      const p = item.Payment;
+      if (p) {
+        expect(p).to.have.property("id");
+        expect(p).to.have.property("amount");
+        expect(p).to.have.property("description");
+        expect(p).to.have.property("alias");
+        expect(p).to.have.property("counterparty_alias");
+      }
+    });
+  });
+}

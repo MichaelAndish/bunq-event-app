@@ -1,0 +1,55 @@
+meta {
+  name: Add Sandbox Funds (Sugar Daddy)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/request-inquiry
+  body: json
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: add-funds-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  Content-Type: application/json
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+body:json {
+  {
+    "amount_inquired": {
+      "value": "500.00",
+      "currency": "EUR"
+    },
+    "counterparty_alias": {
+      "type": "EMAIL",
+      "value": "sugardaddy@bunq.com",
+      "name": "Sugar Daddy"
+    },
+    "description": "Test funds top-up",
+    "allow_bunqme": false
+  }
+}
+
+docs {
+  Requests €500 from the Bunq sandbox Sugar Daddy account (sugardaddy@bunq.com).
+  The request is automatically accepted in sandbox, adding funds to your account.
+  Run "List Monetary Accounts" afterwards to verify the updated balance.
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("request inquiry created", function () {
+    const idObj = res.body.Response.find(r => r.Id);
+    expect(idObj).to.exist;
+    expect(idObj.Id.id).to.be.a("number");
+  });
+}

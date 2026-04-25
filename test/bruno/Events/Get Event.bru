@@ -1,0 +1,32 @@
+meta {
+  name: Get Event
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/events/{{eventId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("event has id", function () {
+    expect(res.body).to.have.property("id");
+  });
+
+  test("event has tiers array", function () {
+    expect(res.body).to.have.property("tiers");
+    expect(res.body.tiers).to.be.an("array");
+  });
+
+  test("event has required fields", function () {
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("date");
+    expect(res.body).to.have.property("location");
+  });
+}

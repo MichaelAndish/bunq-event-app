@@ -1,0 +1,41 @@
+meta {
+  name: Create Sandbox User (Company)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{sandboxBaseUrl}}/sandbox-user-company
+  body: none
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Request-Id: sandbox-company-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  Content-Type: application/json
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+script:post-response {
+  const body = res.body;
+  if (body && body.Response) {
+    const apiCredential = body.Response.find(r => r.ApiCredential);
+    if (apiCredential) {
+      console.log("Company apiKey:", apiCredential.ApiCredential.api_key);
+    }
+  }
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("contains ApiCredential", function () {
+    const apiCredential = res.body.Response.find(r => r.ApiCredential);
+    expect(apiCredential).to.exist;
+  });
+}

@@ -1,0 +1,41 @@
+meta {
+  name: Register Device Server
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{sandboxBaseUrl}}/device-server
+  body: json
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Request-Id: device-server-{{$timestamp}}
+  X-Bunq-Client-Authentication: {{installationToken}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  Content-Type: application/json
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+body:json {
+  {
+    "description": "Bunq Bruno Collection",
+    "secret": "{{apiKey}}",
+    "permitted_ips": ["*"]
+  }
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response has Id", function () {
+    const idObj = res.body.Response.find(r => r.Id);
+    expect(idObj).to.exist;
+    expect(idObj.Id).to.have.property("id");
+  });
+}

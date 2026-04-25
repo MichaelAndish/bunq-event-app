@@ -1,0 +1,51 @@
+meta {
+  name: Run Workflow
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/agent/run
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Rooftop Summer Sessions",
+    "date": "Fri, 20 Jun • 19:00",
+    "location": "Amsterdam, Netherlands",
+    "description": "Sunset sessions on the rooftop with live DJs and panoramic canal views.",
+    "ticketTiers": [
+      {
+        "id": "early-bird",
+        "name": "Early Bird",
+        "price": "€15.00"
+      },
+      {
+        "id": "general",
+        "name": "General Admission",
+        "price": "€25.00"
+      },
+      {
+        "id": "vip",
+        "name": "VIP Lounge",
+        "price": "€80.00"
+      }
+    ]
+  }
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response has status field", function () {
+    expect(res.body).to.have.property("status");
+  });
+}

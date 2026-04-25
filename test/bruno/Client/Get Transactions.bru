@@ -1,0 +1,38 @@
+meta {
+  name: Get Transactions
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/client/transactions
+  body: none
+  auth: none
+}
+
+params:query {
+  userId: {{userId}}
+  accountId: {{accountId}}
+  count: 10
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response is an array", function () {
+    expect(res.body).to.be.an("array");
+  });
+
+  test("each transaction has required fields", function () {
+    res.body.forEach(function (tx) {
+      expect(tx).to.have.property("id");
+      expect(tx).to.have.property("amount");
+      expect(tx).to.have.property("currency");
+      expect(tx).to.have.property("description");
+      expect(tx).to.have.property("counterparty");
+      expect(tx).to.have.property("createdAt");
+    });
+  });
+}

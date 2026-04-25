@@ -1,0 +1,54 @@
+services:
+
+  db:
+    image: postgres:16-alpine
+    container_name: bunq-db
+    environment:
+      POSTGRES_DB:       bunq
+      POSTGRES_USER:     bunq
+      POSTGRES_PASSWORD: bunq
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bunq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bunq-backend
+    ports:
+      - "9191:9191"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://bunq:bunq@db:5432/bunq
+    volumes:
+      - ./backend/src:/app/src
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bunq-frontend
+    ports:
+      - "9292:9292"
+    environment:
+      - VITE_API_URL=/api
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

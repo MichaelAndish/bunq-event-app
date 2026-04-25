@@ -1,0 +1,34 @@
+meta {
+  name: List bunq.me Tabs
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/bunqme-tab
+  body: none
+  auth: none
+}
+
+params:query {
+  count: 10
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: bunqme-list-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response is an array", function () {
+    expect(res.body.Response).to.be.an("array");
+  });
+}

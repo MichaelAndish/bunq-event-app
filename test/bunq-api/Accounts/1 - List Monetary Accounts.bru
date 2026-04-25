@@ -1,0 +1,54 @@
+meta {
+  name: List Monetary Accounts
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank
+  body: none
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: list-accounts-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+script:post-response {
+  const body = res.body;
+  if (body && body.Response && body.Response.length > 0) {
+    const first = body.Response[0].MonetaryAccountBank;
+    if (first) {
+      bru.setEnvVar("accountId", String(first.id));
+      console.log("Saved accountId:", first.id, "| Balance:", first.balance.value, first.balance.currency);
+    }
+  }
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response has at least one account", function () {
+    expect(res.body.Response).to.be.an("array").and.have.length.above(0);
+  });
+
+  test("first account has balance and IBAN", function () {
+    const account = res.body.Response[0].MonetaryAccountBank;
+    expect(account).to.have.property("balance");
+    expect(account.balance).to.have.property("value");
+    expect(account.balance).to.have.property("currency");
+    const iban = account.alias.find(a => a.type === "IBAN");
+    expect(iban).to.exist;
+  });
+
+  test("accountId saved to env", function () {
+    expect(bru.getEnvVar("accountId")).to.be.a("string").and.have.length.above(0);
+  });
+}

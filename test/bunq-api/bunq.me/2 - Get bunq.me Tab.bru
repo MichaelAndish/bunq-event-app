@@ -1,0 +1,39 @@
+meta {
+  name: Get bunq.me Tab
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/bunqme-tab/{{tabUuid}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: bunqme-get-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("tab has status and entry", function () {
+    const tab = res.body.Response[0].BunqMeTab;
+    expect(tab).to.exist;
+    expect(tab).to.have.property("status");
+    expect(tab).to.have.property("bunqme_tab_entry");
+    expect(tab.bunqme_tab_entry).to.have.property("amount_inquired");
+  });
+
+  test("tab is OPEN", function () {
+    const tab = res.body.Response[0].BunqMeTab;
+    expect(tab.status).to.equal("OPEN");
+  });
+}

@@ -1,0 +1,65 @@
+meta {
+  name: Create Event
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/events
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Neon Nights",
+    "date": "Sat, 3 May • 22:00",
+    "location": "Berlin, Germany",
+    "description": "An unforgettable night of techno and neon lights.",
+    "tiers": [
+      {
+        "name": "General Admission",
+        "price": "€25.00",
+        "currency": "EUR"
+      },
+      {
+        "name": "VIP Table",
+        "price": "€150.00",
+        "currency": "EUR"
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("eventId", res.body.id);
+  }
+}
+
+tests {
+  test("returns 201", function () {
+    expect(res.status).to.equal(201);
+  });
+
+  test("event has an id", function () {
+    expect(res.body).to.have.property("id");
+    expect(res.body.id).to.be.a("string");
+  });
+
+  test("event name matches request", function () {
+    expect(res.body.name).to.equal("Neon Nights");
+  });
+
+  test("tiers are created", function () {
+    expect(res.body.tiers).to.be.an("array").with.lengthOf(2);
+  });
+
+  test("tier prices are stored as decimals", function () {
+    expect(res.body.tiers[0].price).to.equal("25.00");
+  });
+}

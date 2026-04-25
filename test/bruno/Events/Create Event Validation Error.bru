@@ -1,0 +1,28 @@
+meta {
+  name: Create Event Validation Error
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/events
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "",
+    "date": "Sat, 3 May • 22:00"
+  }
+}
+
+tests {
+  test("returns 400 or 422 for invalid body", function () {
+    expect([400, 422]).to.include(res.status);
+  });
+}

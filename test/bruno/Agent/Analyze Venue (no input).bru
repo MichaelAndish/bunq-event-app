@@ -1,0 +1,25 @@
+meta {
+  name: Analyze Venue (no input)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/agent/analyze-venue
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  message:
+}
+
+tests {
+  test("returns 422 when no files and no message", function () {
+    expect(res.status).to.equal(422);
+  });
+
+  test("error message is present", function () {
+    expect(res.body).to.have.property("error");
+  });
+}

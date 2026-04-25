@@ -1,0 +1,45 @@
+meta {
+  name: List Request Inquiries
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{sandboxBaseUrl}}/user/{{userId}}/monetary-account-bank/{{accountId}}/request-inquiry
+  body: none
+  auth: none
+}
+
+params:query {
+  count: 10
+}
+
+headers {
+  X-Bunq-Client-Authentication: {{sessionToken}}
+  X-Bunq-Client-Request-Id: list-inquiries-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response is an array", function () {
+    expect(res.body.Response).to.be.an("array");
+  });
+
+  test("each inquiry has status and amount", function () {
+    res.body.Response.forEach(function (item) {
+      const r = item.RequestInquiry;
+      if (r) {
+        expect(r).to.have.property("id");
+        expect(r).to.have.property("status");
+        expect(r).to.have.property("amount_inquired");
+      }
+    });
+  });
+}

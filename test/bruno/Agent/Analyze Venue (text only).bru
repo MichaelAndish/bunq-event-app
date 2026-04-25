@@ -1,0 +1,48 @@
+meta {
+  name: Analyze Venue (text only)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/agent/analyze-venue
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  message: A rooftop venue in Amsterdam with a capacity of 200 people, panoramic canal views, and an outdoor bar. Perfect for an evening summer event.
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("draft has name", function () {
+    expect(res.body).to.have.property("name");
+    expect(res.body.name).to.be.a("string").and.not.empty;
+  });
+
+  test("draft has date", function () {
+    expect(res.body).to.have.property("date");
+  });
+
+  test("draft has location", function () {
+    expect(res.body).to.have.property("location");
+  });
+
+  test("draft has description", function () {
+    expect(res.body).to.have.property("description");
+  });
+
+  test("draft has at least one ticket tier", function () {
+    expect(res.body.ticketTiers).to.be.an("array").with.length.above(0);
+  });
+
+  test("tier prices contain currency symbol", function () {
+    res.body.ticketTiers.forEach(function (tier) {
+      expect(tier.price).to.match(/^[€$£]/);
+    });
+  });
+}

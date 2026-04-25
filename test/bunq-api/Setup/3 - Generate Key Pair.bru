@@ -1,0 +1,50 @@
+meta {
+  name: Generate Key Pair (run once)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{sandboxBaseUrl}}/health
+  body: none
+  auth: none
+}
+
+docs {
+  # Generate RSA Key Pair
+
+  Run this request's pre-request script to generate an RSA-2048 key pair and save it to env vars.
+  The actual HTTP call (GET /health) is a no-op placeholder — the real work is in the pre-request script.
+
+  After running this, copy the `publicKeyPem` and `privateKeyPem` env var values if you need to back them up.
+  The private key is used to sign Payment requests (Bunq requires a signature for those).
+}
+
+script:pre-request {
+  const crypto = require("crypto");
+
+  const existing = bru.getEnvVar("privateKeyPem");
+  if (existing && existing.trim().length > 0) {
+    console.log("Key pair already exists, skipping generation.");
+  } else {
+    const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", {
+      modulusLength: 2048,
+      publicKeyEncoding:  { type: "spki",  format: "pem" },
+      privateKeyEncoding: { type: "pkcs8", format: "pem" },
+    });
+
+    bru.setEnvVar("privateKeyPem", privateKey);
+    bru.setEnvVar("publicKeyPem", publicKey);
+    console.log("Generated new RSA key pair and saved to env.");
+    console.log("Public key (first 60 chars):", publicKey.slice(0, 60));
+  }
+}
+
+tests {
+  test("key pair is set in env", function () {
+    const priv = bru.getEnvVar("privateKeyPem");
+    const pub  = bru.getEnvVar("publicKeyPem");
+    expect(priv).to.be.a("string").and.include("PRIVATE KEY");
+    expect(pub).to.be.a("string").and.include("PUBLIC KEY");
+  });
+}

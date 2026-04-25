@@ -1,0 +1,65 @@
+meta {
+  name: Create Installation
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{sandboxBaseUrl}}/installation
+  body: json
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Request-Id: installation-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  Content-Type: application/json
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+body:json {
+  {
+    "client_public_key": "{{publicKeyPem}}"
+  }
+}
+
+script:post-response {
+  const body = res.body;
+  if (body && body.Response) {
+    const tokenObj = body.Response.find(r => r.Token);
+    const serverKey = body.Response.find(r => r.ServerPublicKey);
+
+    if (tokenObj) {
+      bru.setEnvVar("installationToken", tokenObj.Token.token);
+      console.log("Saved installationToken:", tokenObj.Token.token.slice(0, 20) + "...");
+    }
+    if (serverKey) {
+      bru.setEnvVar("serverPublicKey", serverKey.ServerPublicKey.server_public_key);
+      console.log("Saved serverPublicKey.");
+    }
+  }
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response has Token", function () {
+    const tokenObj = res.body.Response.find(r => r.Token);
+    expect(tokenObj).to.exist;
+    expect(tokenObj.Token).to.have.property("token");
+  });
+
+  test("response has ServerPublicKey", function () {
+    const serverKey = res.body.Response.find(r => r.ServerPublicKey);
+    expect(serverKey).to.exist;
+  });
+
+  test("installationToken saved to env", function () {
+    const token = bru.getEnvVar("installationToken");
+    expect(token).to.be.a("string").and.have.length.above(10);
+  });
+}

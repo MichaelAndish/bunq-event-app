@@ -1,0 +1,68 @@
+meta {
+  name: Create Session
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{sandboxBaseUrl}}/session-server
+  body: json
+  auth: none
+}
+
+headers {
+  X-Bunq-Client-Request-Id: session-{{$timestamp}}
+  X-Bunq-Client-Authentication: {{installationToken}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  Content-Type: application/json
+  User-Agent: BunqSandboxCollection/1.0
+}
+
+body:json {
+  {
+    "secret": "{{apiKey}}"
+  }
+}
+
+script:post-response {
+  const body = res.body;
+  if (body && body.Response) {
+    const tokenObj = body.Response.find(r => r.Token);
+    const userObj  = body.Response.find(r => r.UserPerson || r.UserCompany || r.UserApiKey);
+
+    if (tokenObj) {
+      bru.setEnvVar("sessionToken", tokenObj.Token.token);
+      console.log("Saved sessionToken:", tokenObj.Token.token.slice(0, 20) + "...");
+    }
+
+    const user = userObj && (userObj.UserPerson || userObj.UserCompany || userObj.UserApiKey);
+    if (user) {
+      bru.setEnvVar("userId", String(user.id));
+      console.log("Saved userId:", user.id);
+    }
+  }
+}
+
+tests {
+  test("returns 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response has Token", function () {
+    const tokenObj = res.body.Response.find(r => r.Token);
+    expect(tokenObj).to.exist;
+    expect(tokenObj.Token).to.have.property("token");
+  });
+
+  test("response has User", function () {
+    const userObj = res.body.Response.find(r => r.UserPerson || r.UserCompany || r.UserApiKey);
+    expect(userObj).to.exist;
+  });
+
+  test("sessionToken and userId saved", function () {
+    expect(bru.getEnvVar("sessionToken")).to.be.a("string").and.have.length.above(10);
+    expect(bru.getEnvVar("userId")).to.be.a("string").and.have.length.above(0);
+  });
+}
