@@ -1,4 +1,5 @@
 import { Mastra } from '@mastra/core'
+import { Observability, DefaultExporter } from '@mastra/observability'
 import { PostgresStore } from '@mastra/pg'
 import { config } from '../config'
 import { venueAgent }               from './agents/venue'
@@ -16,6 +17,15 @@ const storage = new PostgresStore({
   connectionString: config.DATABASE_URL,
 })
 
+const observability = new Observability({
+  configs: {
+    default: {
+      serviceName: 'bunq-events',
+      exporters: [new DefaultExporter()],
+    },
+  },
+})
+
 export const mastra = new Mastra({
   agents: {
     venueAgent,
@@ -29,6 +39,7 @@ export const mastra = new Mastra({
   },
   workflows: { createEventWorkflow },
   storage,
+  observability,
   server: {
     port:       4111,
     host:       '0.0.0.0',

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import TopBar from '../components/TopBar'
-import BunqLogo from '../components/BunqLogo'
 import { SparklesIcon, MicIcon, StopIcon, XIcon } from '../components/Icons'
 import type { Page, EventDraft } from '../App'
 
@@ -231,15 +230,7 @@ export default function AICreateEvent({ onBack, onNavigate, setDraft }: Props) {
   if (isLoading) {
     return (
       <div className="ai-loading-screen">
-        <div className="ai-loading-ring">
-          <svg className="ai-loading-svg" viewBox="0 0 160 160">
-            <circle cx="80" cy="80" r="70" className="ai-loading-track" />
-            <circle cx="80" cy="80" r="70" className="ai-loading-arc" />
-          </svg>
-          <div className="ai-loading-logo">
-            <BunqLogo size={72} />
-          </div>
-        </div>
+        <div className="ai-loading-rainbow-ring" />
         <p className="ai-loading-title">Analysing your venue…</p>
         <p className="ai-loading-sub">AI is preparing your event details</p>
       </div>
