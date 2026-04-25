@@ -48,7 +48,18 @@ type TicketRow = {
   event: { id: string; name: string; date: string; location: string }
 }
 
-export type { Transaction, EventRow, TicketRow }
+type EventTicket = {
+  id: string
+  buyerName: string
+  buyerEmail: string
+  paymentStatus: 'pending' | 'paid' | 'failed'
+  purchasedAt: string
+  tierName: string
+  tierPrice: string
+  tierCurrency: string
+}
+
+export type { Transaction, EventRow, TicketRow, EventTicket }
 
 export const api = {
   health: () =>
@@ -99,6 +110,9 @@ export const api = {
 
   getTicket: (id: string) =>
     request<TicketRow>(`/tickets/${id}`),
+
+  getEventTickets: (eventId: string) =>
+    request<EventTicket[]>(`/events/${eventId}/tickets`),
 
   getEventStats: (id: string) =>
     request<{

@@ -134,8 +134,8 @@ export default function App() {
           {page === 'payment-rejected'   && <PaymentRejected mock={mock} onBack={goBack} onNavigate={navigate} />}
           {page === 'manage-event'       && <ManageEvent mock={mock} eventId={selectedEventId} onBack={goBack} onNavigate={navigate} />}
           {page === 'analytics'          && <Analytics mock={mock} eventId={selectedEventId} onBack={goBack} onNavigate={navigate} />}
-          {page === 'customer-insights'  && <CustomerInsights mock={mock} onBack={goBack} />}
-          {page === 'transaction-history' && <TransactionHistory mock={mock} onBack={goBack} />}
+          {page === 'customer-insights'  && <CustomerInsights mock={mock} eventId={selectedEventId} onBack={goBack} />}
+          {page === 'transaction-history' && <TransactionHistory mock={mock} eventId={selectedEventId} onBack={goBack} />}
           {page === 'cards'   && <Placeholder title="Cards" />}
           {page === 'savings' && <Placeholder title="Savings" />}
           {page === 'stocks'  && <Agent />}

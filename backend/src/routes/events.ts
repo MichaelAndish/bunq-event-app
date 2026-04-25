@@ -99,6 +99,31 @@ router.get('/:id/stats', async (c) => {
   })
 })
 
+// GET /events/:id/tickets — all paid tickets for an event (for transaction history / insights)
+router.get('/:id/tickets', async (c) => {
+  const id = c.req.param('id')
+  const [event] = await db.select().from(events).where(eq(events.id, id))
+  if (!event) return c.json({ error: 'Event not found' }, 404)
+
+  const rows = await db
+    .select({
+      id:            tickets.id,
+      buyerName:     tickets.buyerName,
+      buyerEmail:    tickets.buyerEmail,
+      paymentStatus: tickets.paymentStatus,
+      purchasedAt:   tickets.purchasedAt,
+      tierName:      ticketTiers.name,
+      tierPrice:     ticketTiers.price,
+      tierCurrency:  ticketTiers.currency,
+    })
+    .from(tickets)
+    .innerJoin(ticketTiers, eq(tickets.tierId, ticketTiers.id))
+    .where(eq(ticketTiers.eventId, id))
+    .orderBy(tickets.purchasedAt)
+
+  return c.json(rows)
+})
+
 // POST /events — create event with optional file uploads
 // Accepts multipart/form-data: draft (JSON string), banner (File), media-N (File[])
 router.post('/', async (c) => {
