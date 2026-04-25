@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 
-type AgentStatus = {
-  agents_running: number
-  model_loaded: boolean
-  note: string
-}
-
 export default function Agent() {
-  const [status, setStatus] = useState<AgentStatus | null>(null)
+  const [aiAvailable, setAiAvailable] = useState<boolean | null>(null)
+  const [agents,      setAgents]      = useState<string[]>([])
 
   useEffect(() => {
-    api.agentStatus().then(setStatus).catch(() => {})
+    api.agentStatus()
+      .then(s => { setAiAvailable(s.aiAvailable); setAgents(s.agents) })
+      .catch(() => setAiAvailable(false))
   }, [])
 
   return (
@@ -19,22 +16,16 @@ export default function Agent() {
       <h1 className="page-title">Agent</h1>
 
       <div className="card">
-        <p className="card-label">Model</p>
+        <p className="card-label">AI Status</p>
         <div className="status-row">
-          <span className={`status-dot ${status?.model_loaded ? 'green' : 'grey'}`} />
-          <span>{status?.model_loaded ? 'loaded' : 'not loaded'}</span>
+          <span className={`status-dot ${aiAvailable ? 'green' : 'grey'}`} />
+          <span>{aiAvailable === null ? 'checking…' : aiAvailable ? 'ready' : 'no API key'}</span>
         </div>
       </div>
 
       <div className="card">
-        <p className="card-label">Running Agents</p>
-        <p className="metric-value">{status?.agents_running ?? 0}</p>
-      </div>
-
-      <div className="card">
-        <p className="note-text">
-          Agent runtime integration is pending. Routes are wired — implementation comes next.
-        </p>
+        <p className="card-label">Registered Agents</p>
+        <p className="metric-value">{agents.length}</p>
       </div>
     </div>
   )

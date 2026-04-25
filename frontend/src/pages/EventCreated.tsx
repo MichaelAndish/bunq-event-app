@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import { CircleCheckIcon, DownloadIcon, CopyIcon, EyeIcon, SlidersIcon } from '../components/Icons'
+import { api } from '../api/client'
+import type { EventRow } from '../api/client'
 import type { Page } from '../App'
 
 // 21×21 QR code (Version 1) — visual approximation with correct finder patterns
@@ -51,10 +53,43 @@ function QRCode() {
   )
 }
 
-type Props = { onNavigate: (page: Page) => void }
+type Props = { mock: boolean; eventId?: string | null; onNavigate: (page: Page) => void }
 
-export default function EventCreated({ onNavigate }: Props) {
-  const [isLive, setIsLive] = useState(true)
+export default function EventCreated({ mock, eventId, onNavigate }: Props) {
+  const [isLive,  setIsLive]  = useState(true)
+  const [event,   setEvent]   = useState<EventRow | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (mock || !eventId) return
+    setLoading(true)
+    api.getEvent(eventId)
+      .then(e => setEvent(e))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [mock, eventId])
+
+  const displayName     = mock ? 'bunq demo day'       : (event?.name     ?? '—')
+  const displayDate     = mock ? 'Sat, 25 Apr • 14:00' : (event?.date     ?? '—')
+  const displayLocation = mock ? 'bunq HQ'             : (event?.location ?? '—')
+
+  if (!mock && !eventId) return (
+    <div>
+      <TopBar />
+      <div className="success-hero">
+        <div className="success-icon">
+          <CircleCheckIcon size={32} color="#30d158" />
+        </div>
+        <h1 className="success-title">Event Created!</h1>
+        <p className="success-subtitle">Your event has been saved.</p>
+      </div>
+      <div style={{ display: 'flex', gap: 12, margin: '0 20px 16px' }}>
+        <button className="action-pair-btn primary" style={{ flex: 1 }} onClick={() => onNavigate('your-events')}>
+          View Your Events
+        </button>
+      </div>
+    </div>
+  )
 
   return (
     <div>
@@ -65,7 +100,7 @@ export default function EventCreated({ onNavigate }: Props) {
           <CircleCheckIcon size={32} color={isLive ? '#0a84ff' : '#8e8e93'} />
         </div>
         <h1 className="success-title">
-          {isLive ? 'Your Event is Live!' : 'Your Event is Offline'}
+          {loading ? 'Saving…' : isLive ? 'Your Event is Live!' : 'Your Event is Offline'}
         </h1>
         <p className="success-subtitle">
           {isLive
@@ -78,32 +113,34 @@ export default function EventCreated({ onNavigate }: Props) {
       <div className="ev-details-card">
         <div className="ev-details-header">
           <span className="ev-details-label">Event details</span>
-          <div className="status-toggle">
-            <button
-              className={`status-toggle-btn${isLive ? ' active-live' : ''}`}
-              onClick={() => setIsLive(true)}
-            >
-              Live
-            </button>
-            <button
-              className={`status-toggle-btn${!isLive ? ' active-offline' : ''}`}
-              onClick={() => setIsLive(false)}
-            >
-              Offline
-            </button>
-          </div>
+          {!loading && (
+            <div className="status-toggle">
+              <button
+                className={`status-toggle-btn${isLive ? ' active-live' : ''}`}
+                onClick={() => setIsLive(true)}
+              >
+                Live
+              </button>
+              <button
+                className={`status-toggle-btn${!isLive ? ' active-offline' : ''}`}
+                onClick={() => setIsLive(false)}
+              >
+                Offline
+              </button>
+            </div>
+          )}
         </div>
         <div className="ev-detail-row">
           <span className="ev-detail-key">Event</span>
-          <span className="ev-detail-val">bunq demo day</span>
+          <span className="ev-detail-val">{displayName}</span>
         </div>
         <div className="ev-detail-row">
           <span className="ev-detail-key">Date</span>
-          <span className="ev-detail-val">Sat, 25 Apr • 14:00</span>
+          <span className="ev-detail-val">{displayDate}</span>
         </div>
         <div className="ev-detail-row">
           <span className="ev-detail-key">Location</span>
-          <span className="ev-detail-val">bunq HQ</span>
+          <span className="ev-detail-val">{displayLocation}</span>
         </div>
       </div>
 

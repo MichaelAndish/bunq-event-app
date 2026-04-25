@@ -2,7 +2,7 @@ import { useState } from 'react'
 import PageHeader from '../components/PageHeader'
 import { SearchIcon, MessageBubbleIcon } from '../components/Icons'
 
-type Props = { onBack: () => void }
+type Props = { mock: boolean; onBack: () => void }
 
 type TabKey = 'spend' | 'tickets' | 'food' | 'drinks'
 
@@ -129,8 +129,19 @@ function CustomerCard({ c, tab }: { c: typeof CUSTOMERS[0]; tab: TabKey }) {
   )
 }
 
-export default function CustomerInsights({ onBack }: Props) {
+export default function CustomerInsights({ mock, onBack }: Props) {
   const [tab, setTab] = useState<TabKey>('spend')
+
+  if (!mock) return (
+    <div>
+      <PageHeader onBack={onBack} title="Best Customers" />
+      <div className="list-card" style={{ margin: '0 20px' }}>
+        <div className="list-row" style={{ color: '#8e8e93', fontSize: 14 }}>
+          <span style={{ padding: '8px 0' }}>No customer data available yet.</span>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div>

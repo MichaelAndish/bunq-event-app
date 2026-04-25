@@ -1,10 +1,10 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { db } from '../db/client'
-import { events, ticketTiers } from '../db/schema'
+import { events, ticketTiers, tickets } from '../db/schema'
 import { parsePrice } from '../db/price'
 import { uploadFile } from '../storage/client'
 
@@ -46,6 +46,56 @@ router.get('/:id', async (c) => {
   if (!event) return c.json({ error: 'Event not found' }, 404)
   const tiers = await db.select().from(ticketTiers).where(eq(ticketTiers.eventId, id))
   return c.json({ ...event, tiers })
+})
+
+// GET /events/:id/stats — event + tier breakdown + actual ticket sales
+router.get('/:id/stats', async (c) => {
+  const id = c.req.param('id')
+  const [event] = await db.select().from(events).where(eq(events.id, id))
+  if (!event) return c.json({ error: 'Event not found' }, 404)
+
+  const tiers = await db.select().from(ticketTiers).where(eq(ticketTiers.eventId, id))
+
+  // Count paid tickets per tier
+  const soldRows = await db
+    .select({ tierId: tickets.tierId, count: sql<number>`count(*)::int` })
+    .from(tickets)
+    .where(eq(tickets.paymentStatus, 'paid'))
+    .groupBy(tickets.tierId)
+
+  const soldByTier = Object.fromEntries(soldRows.map(r => [r.tierId, r.count]))
+
+  const tierStats = tiers.map(t => {
+    const sold       = soldByTier[t.id] ?? 0
+    const priceNum   = parseFloat(t.price)
+    const capacity   = t.quantity ?? null
+    return {
+      id:              t.id,
+      name:            t.name,
+      price:           t.price,
+      currency:        t.currency,
+      capacity,
+      sold,
+      remaining:       capacity !== null ? capacity - sold : null,
+      actualRevenue:   (sold * priceNum).toFixed(2),
+      projectedRevenue: capacity !== null ? (capacity * priceNum).toFixed(2) : null,
+    }
+  })
+
+  const totalSold            = tierStats.reduce((s, t) => s + t.sold, 0)
+  const totalActualRevenue   = tierStats.reduce((s, t) => s + parseFloat(t.actualRevenue), 0).toFixed(2)
+  const totalCapacity        = tierStats.every(t => t.capacity !== null)
+    ? tierStats.reduce((s, t) => s + (t.capacity ?? 0), 0)
+    : null
+  const totalProjectedRevenue = totalCapacity !== null
+    ? tierStats.reduce((s, t) => s + parseFloat(t.projectedRevenue ?? '0'), 0).toFixed(2)
+    : null
+
+  return c.json({
+    event,
+    tiers: tierStats,
+    summary: { totalSold, totalActualRevenue, totalCapacity, totalProjectedRevenue },
+  })
 })
 
 // POST /events — create event with optional file uploads

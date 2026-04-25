@@ -16,9 +16,9 @@ const DEFAULT_TIERS: Tier[] = [
   { id: 'vip',     name: 'VIP Table',         subtitle: 'Bottle service + priority entry', price: '€1000.00' },
 ]
 
-type Props = { onBack: () => void; onNavigate: (page: Page) => void; draft?: EventDraft | null }
+type Props = { onBack: () => void; onNavigate: (page: Page) => void; draft?: EventDraft | null; aiWarning?: boolean; onEventCreated?: (id: string) => void }
 
-export default function CreateEvent({ onBack, onNavigate, draft }: Props) {
+export default function CreateEvent({ onBack, onNavigate, draft, aiWarning, onEventCreated }: Props) {
   const [vipAnalytics, setVipAnalytics] = useState(true)
   const [eventName, setEventName]       = useState(draft?.name ?? '')
   const [date, setDate]                 = useState(draft?.date ?? '')
@@ -99,7 +99,8 @@ export default function CreateEvent({ onBack, onNavigate, draft }: Props) {
       }))
       if (bannerFile) formData.append('banner', bannerFile)
       mediaFileObjs.forEach(f => formData.append('media', f))
-      await api.createEvent(formData)
+      const created = await api.createEvent(formData)
+      onEventCreated?.(created.id)
       onNavigate('event-created')
     } catch {
       setSubmitError('Could not save event. Please try again.')
@@ -111,8 +112,15 @@ export default function CreateEvent({ onBack, onNavigate, draft }: Props) {
     <div>
       <TopBar onBack={onBack} />
 
+      {/* AI unavailable notice */}
+      {aiWarning && (
+        <div className="low-confidence-banner" style={{ borderColor: 'rgba(142,142,147,0.4)', color: '#8e8e93', background: 'rgba(142,142,147,0.08)' }}>
+          AI is not available at the moment. Please fill in your event details manually.
+        </div>
+      )}
+
       {/* Low-confidence AI warning */}
-      {draft?.lowConfidence && (
+      {!aiWarning && draft?.lowConfidence && (
         <div className="low-confidence-banner">
           AI could not detect all details — please review and complete the fields below.
         </div>

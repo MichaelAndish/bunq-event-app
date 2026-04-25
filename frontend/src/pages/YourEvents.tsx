@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
 import {
   ChevronRightIcon, CalendarIcon, LocationPinIcon,
   MusicNoteIcon, PeopleGroupIcon, CameraIcon,
   GridAppsIcon,
 } from '../components/Icons'
+import { api } from '../api/client'
+import type { EventRow } from '../api/client'
 import type { Page } from '../App'
 
-type Props = { onBack: () => void; onNavigate: (page: Page) => void }
-
+type Props = { mock: boolean; onBack: () => void; onNavigate: (page: Page) => void; onSelectEvent?: (id: string) => void }
 type Tab = 'organising' | 'joined' | 'archived'
 
 type EventItem = {
@@ -16,143 +17,65 @@ type EventItem = {
   name: string
   date: string
   location: string
-  iconBg: string
-  Icon: React.FC<{ size?: number; color?: string }>
+  gradient: string
   badge?: string
   badgeColor?: string
-  role?: 'organiser' | 'attendee'
 }
 
-const ORGANISING_EVENTS: EventItem[] = [
-  {
-    id: 'neon-nights',
-    name: 'Neon Nights',
-    date: 'Tonight · 10 PM',
-    location: 'Berlin, Germany',
-    iconBg: 'linear-gradient(135deg, #bf5af2, #9b59b6)',
-    Icon: MusicNoteIcon,
-    badge: 'Live',
-    badgeColor: '#30d158',
-  },
-  {
-    id: 'tech-summit',
-    name: 'Tech Summit 2026',
-    date: 'May 3 · 9 AM',
-    location: 'Amsterdam, Netherlands',
-    iconBg: 'linear-gradient(135deg, #0a84ff, #00c7be)',
-    Icon: PeopleGroupIcon,
-    badge: 'Upcoming',
-    badgeColor: '#0a84ff',
-  },
+const GRADIENTS = [
+  'linear-gradient(135deg, #bf5af2, #9b59b6)',
+  'linear-gradient(135deg, #0a84ff, #00c7be)',
+  'linear-gradient(135deg, #30d158, #1e7a38)',
+  'linear-gradient(135deg, #ff9500, #e67e00)',
 ]
 
-const JOINED_EVENTS: EventItem[] = [
-  {
-    id: 'summer-music',
-    name: 'Summer Music Fest',
-    date: 'Jun 15 · 4 PM',
-    location: 'Berlin, Germany',
-    iconBg: 'linear-gradient(135deg, #bf5af2, #7b4fa0)',
-    Icon: MusicNoteIcon,
-    badge: 'Ticket confirmed',
-    badgeColor: '#30d158',
-  },
-  {
-    id: 'art-exhibition',
-    name: 'Art Exhibition',
-    date: 'May 2 · 11 AM',
-    location: 'Paris, France',
-    iconBg: 'linear-gradient(135deg, #ff9500, #e67e00)',
-    Icon: CameraIcon,
-    badge: 'Ticket confirmed',
-    badgeColor: '#30d158',
-  },
-  {
-    id: 'tech-networking',
-    name: 'Tech Networking',
-    date: 'Apr 28 · 6 PM',
-    location: 'London, UK',
-    iconBg: 'linear-gradient(135deg, #30d158, #1e7a38)',
-    Icon: PeopleGroupIcon,
-    badge: 'Ticket confirmed',
-    badgeColor: '#30d158',
-  },
+const MOCK_ORGANISING: EventItem[] = [
+  { id: 'neon-nights', name: 'Neon Nights',     date: 'Tonight · 10 PM', location: 'Berlin, Germany',       gradient: GRADIENTS[0], badge: 'Live',     badgeColor: '#30d158' },
+  { id: 'tech-summit', name: 'Tech Summit 2026', date: 'May 3 · 9 AM',   location: 'Amsterdam, Netherlands', gradient: GRADIENTS[1], badge: 'Upcoming', badgeColor: '#0a84ff' },
+]
+const MOCK_JOINED: EventItem[] = [
+  { id: 'summer-music', name: 'Summer Music Fest',  date: 'Jun 15 · 4 PM', location: 'Berlin, Germany', gradient: GRADIENTS[0], badge: 'Ticket confirmed', badgeColor: '#30d158' },
+  { id: 'art-exhibit',  name: 'Art Exhibition',     date: 'May 2 · 11 AM', location: 'Paris, France',   gradient: GRADIENTS[2], badge: 'Ticket confirmed', badgeColor: '#30d158' },
+  { id: 'tech-network', name: 'Tech Networking',    date: 'Apr 28 · 6 PM', location: 'London, UK',      gradient: GRADIENTS[3], badge: 'Ticket confirmed', badgeColor: '#30d158' },
+]
+const MOCK_ARCHIVED: EventItem[] = [
+  { id: 'winter-gala',  name: 'Winter Gala 2025',  date: 'Dec 31, 2025', location: 'Vienna, Austria',  gradient: 'linear-gradient(135deg, #636366, #48484a)' },
+  { id: 'spring-fest',  name: 'Spring Festival',   date: 'Mar 20, 2025', location: 'London, UK',       gradient: 'linear-gradient(135deg, #636366, #48484a)' },
+  { id: 'neon-2024',    name: 'Neon Nights 2024',  date: 'Dec 1, 2024',  location: 'Berlin, Germany',  gradient: 'linear-gradient(135deg, #636366, #48484a)' },
 ]
 
-const ARCHIVED_EVENTS: EventItem[] = [
-  {
-    id: 'winter-gala',
-    name: 'Winter Gala 2025',
-    date: 'Dec 31, 2025',
-    location: 'Vienna, Austria',
-    iconBg: 'linear-gradient(135deg, #636366, #48484a)',
-    Icon: MusicNoteIcon,
-    role: 'organiser',
-  },
-  {
-    id: 'spring-festival',
-    name: 'Spring Festival',
-    date: 'Mar 20, 2025',
-    location: 'London, UK',
-    iconBg: 'linear-gradient(135deg, #636366, #48484a)',
-    Icon: GridAppsIcon,
-    role: 'organiser',
-  },
-  {
-    id: 'neon-nights-2024',
-    name: 'Neon Nights 2024',
-    date: 'Dec 1, 2024',
-    location: 'Berlin, Germany',
-    iconBg: 'linear-gradient(135deg, #636366, #48484a)',
-    Icon: MusicNoteIcon,
-    role: 'attendee',
-  },
-]
-
-const TABS: { id: Tab; label: string; count: number }[] = [
-  { id: 'organising', label: 'Organising', count: ORGANISING_EVENTS.length },
-  { id: 'joined',     label: 'Joined',     count: JOINED_EVENTS.length },
-  { id: 'archived',   label: 'Archived',   count: ARCHIVED_EVENTS.length },
-]
-
-function RolePill({ role }: { role: 'organiser' | 'attendee' }) {
-  return role === 'organiser'
-    ? <span className="ye-role-pill ye-role-pill--organiser">Organiser</span>
-    : <span className="ye-role-pill ye-role-pill--attendee">Attendee</span>
+function badgeForStatus(status: EventRow['status']): { badge: string; badgeColor: string } | undefined {
+  if (status === 'live')     return { badge: 'Live',     badgeColor: '#30d158' }
+  if (status === 'draft')    return { badge: 'Draft',    badgeColor: '#0a84ff' }
+  if (status === 'archived') return { badge: 'Archived', badgeColor: '#636366' }
 }
 
-function EventList({ events, target, showRole, onNavigate }: {
-  events: EventItem[]
-  target?: Page
-  showRole?: boolean
-  onNavigate: (page: Page) => void
-}) {
-  if (!events.length) {
+function EventList({ items, target, onNavigate, onSelect }: { items: EventItem[]; target?: Page; onNavigate: (p: Page) => void; onSelect?: (id: string) => void }) {
+  if (!items.length) {
     return (
-      <div className="ye-empty">
-        <p className="ye-empty-text">Nothing here yet</p>
+      <div className="list-card">
+        <div className="list-row" style={{ color: '#8e8e93', fontSize: 14 }}>
+          <span style={{ padding: '8px 0' }}>Nothing here yet</span>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="list-card">
-      {events.map(({ id, name, date, location, iconBg, Icon, badge, badgeColor, role }, i) => (
+      {items.map(({ id, name, date, location, gradient, badge, badgeColor }, i) => (
         <div key={id}>
           {i > 0 && <div className="list-separator" />}
           <button
             className="list-row list-row-btn"
             style={{ alignItems: 'flex-start', paddingTop: 14, paddingBottom: 14 }}
-            onClick={() => target && onNavigate(target)}
+            onClick={() => { onSelect?.(id); target && onNavigate(target) }}
           >
-            <span className="list-icon" style={{ background: iconBg, marginTop: 2 }}>
-              <Icon size={20} color="#fff" />
+            <span className="list-icon" style={{ background: gradient, marginTop: 2 }}>
+              <MusicNoteIcon size={20} color="#fff" />
             </span>
             <span className="list-info">
-              <span className="list-name" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {name}
-                {showRole && role && <RolePill role={role} />}
-              </span>
+              <span className="list-name">{name}</span>
               <span className="list-subtitle" style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
                 <CalendarIcon size={11} color="#636366" />
                 {date}
@@ -176,15 +99,41 @@ function EventList({ events, target, showRole, onNavigate }: {
   )
 }
 
-export default function YourEvents({ onBack, onNavigate }: Props) {
+export default function YourEvents({ mock, onBack, onNavigate, onSelectEvent }: Props) {
   const [tab, setTab] = useState<Tab>('organising')
+  const [liveEvents, setLiveEvents] = useState<EventRow[]>([])
+
+  useEffect(() => {
+    if (mock) return
+    api.listEvents().then(setLiveEvents).catch(() => {})
+  }, [mock])
+
+  const organising: EventItem[] = mock
+    ? MOCK_ORGANISING
+    : liveEvents
+        .filter(e => e.status === 'live' || e.status === 'draft')
+        .map((e, i) => ({ id: e.id, name: e.name, date: e.date, location: e.location, gradient: GRADIENTS[i % GRADIENTS.length], ...badgeForStatus(e.status) }))
+
+  const archived: EventItem[] = mock
+    ? MOCK_ARCHIVED
+    : liveEvents
+        .filter(e => e.status === 'archived')
+        .map((e, i) => ({ id: e.id, name: e.name, date: e.date, location: e.location, gradient: 'linear-gradient(135deg, #636366, #48484a)' }))
+
+  const joined: EventItem[] = mock ? MOCK_JOINED : []
+
+  const tabs: { id: Tab; label: string; count: number }[] = [
+    { id: 'organising', label: 'Organising', count: organising.length },
+    { id: 'joined',     label: 'Joined',     count: joined.length },
+    { id: 'archived',   label: 'Archived',   count: archived.length },
+  ]
 
   return (
     <div>
       <PageHeader onBack={onBack} title="Your Events" />
 
       <div className="ye-tabs">
-        {TABS.map(t => (
+        {tabs.map(t => (
           <button
             key={t.id}
             className={`ye-tab${tab === t.id ? ' ye-tab--active' : ''}`}
@@ -198,9 +147,9 @@ export default function YourEvents({ onBack, onNavigate }: Props) {
         ))}
       </div>
 
-      {tab === 'organising' && <EventList events={ORGANISING_EVENTS} target="manage-event"  onNavigate={onNavigate} />}
-      {tab === 'joined'     && <EventList events={JOINED_EVENTS}     target="guest-preview" onNavigate={onNavigate} />}
-      {tab === 'archived'   && <EventList events={ARCHIVED_EVENTS}   showRole               onNavigate={onNavigate} />}
+      {tab === 'organising' && <EventList items={organising} target="manage-event"  onNavigate={onNavigate} onSelect={onSelectEvent} />}
+      {tab === 'joined'     && <EventList items={joined}     target="guest-preview" onNavigate={onNavigate} />}
+      {tab === 'archived'   && <EventList items={archived}                          onNavigate={onNavigate} />}
     </div>
   )
 }

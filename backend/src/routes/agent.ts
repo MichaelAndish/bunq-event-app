@@ -61,10 +61,15 @@ router.post('/analyze-venue', async (c) => {
     if (file.size > limit) return c.json({ error: `File too large: ${file.name}` }, 422)
   }
 
-  // Fall back to mock immediately if no API key
-  if (!config.ANTHROPIC_API_KEY) {
+  // Return mock only when mock mode is explicitly enabled
+  if (config.BUNQ_USE_MOCK) {
     const bannerUrl = await tryUploadFirst(rawFiles, 'venues')
     return c.json({ ...MOCK_DRAFT, ...(bannerUrl ? { bannerUrl } : {}) })
+  }
+
+  // AI not configured — tell the frontend to degrade gracefully
+  if (!config.ANTHROPIC_API_KEY) {
+    return c.json({ error: 'AI is not available. Please create your event manually.' }, 503)
   }
 
   // Separate files by type
@@ -99,8 +104,7 @@ router.post('/analyze-venue', async (c) => {
     return c.json({ ...enriched, ...(bannerUrl ? { bannerUrl } : {}) })
   } catch (err) {
     console.error('Orchestration failed:', err)
-    const bannerUrl = uploadedUrls[0]
-    return c.json({ ...MOCK_DRAFT, ...(bannerUrl ? { bannerUrl } : {}) })
+    return c.json({ error: 'AI analysis failed. Please try again or create your event manually.' }, 500)
   }
 })
 
@@ -138,12 +142,13 @@ router.post('/run', async (c) => {
 // GET /agent/status
 router.get('/status', async (c) => {
   return c.json({
+    aiAvailable: Boolean(config.ANTHROPIC_API_KEY),
+    mock:        config.BUNQ_USE_MOCK,
     agents: [
       'venueAgent', 'imageExtractorAgent', 'voiceExtractorAgent', 'textExtractorAgent',
       'descriptionGeneratorAgent', 'priceOptimizerAgent', 'inviteeOptimizerAgent', 'eventImageGeneratorAgent',
     ],
     workflows: ['createEventWorkflow'],
-    ai:        config.ANTHROPIC_API_KEY ? 'ready' : 'no key',
     studio:    'http://localhost:4111',
   })
 })

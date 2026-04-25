@@ -2,9 +2,20 @@ import PageHeader from '../components/PageHeader'
 import { ChevronRightIcon } from '../components/Icons'
 import type { Page } from '../App'
 
-type Props = { onBack: () => void; onNavigate: (page: Page) => void }
+type Props = { mock: boolean; onBack: () => void; onNavigate: (page: Page) => void }
 
-export default function PaymentRejected({ onBack, onNavigate }: Props) {
+export default function PaymentRejected({ mock, onBack, onNavigate }: Props) {
+  if (!mock) return (
+    <div>
+      <PageHeader title="Payment Failed" onBack={onBack} />
+      <div className="list-card" style={{ margin: '0 20px' }}>
+        <div className="list-row" style={{ color: '#ff453a', fontSize: 14 }}>
+          <span style={{ padding: '8px 0' }}>Payment could not be processed. Please try again.</span>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div>
       <PageHeader title="Buy ticket" />

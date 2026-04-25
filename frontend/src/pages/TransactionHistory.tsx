@@ -2,7 +2,7 @@ import { useState } from 'react'
 import PageHeader from '../components/PageHeader'
 import { SlidersIcon, SearchIcon, XIcon, TrendUpIcon } from '../components/Icons'
 
-type Props = { onBack: () => void }
+type Props = { mock: boolean; onBack: () => void }
 
 type Tx = {
   initials: string
@@ -43,8 +43,19 @@ const GROUPS: Group[] = [
   },
 ]
 
-export default function TransactionHistory({ onBack }: Props) {
+export default function TransactionHistory({ mock, onBack }: Props) {
   const [query, setQuery] = useState('')
+
+  if (!mock) return (
+    <div>
+      <PageHeader onBack={onBack} title="Transactions" />
+      <div className="list-card" style={{ margin: '0 20px' }}>
+        <div className="list-row" style={{ color: '#8e8e93', fontSize: 14 }}>
+          <span style={{ padding: '8px 0' }}>No transactions yet.</span>
+        </div>
+      </div>
+    </div>
+  )
 
   const filtered = query.trim()
     ? GROUPS.map(g => ({

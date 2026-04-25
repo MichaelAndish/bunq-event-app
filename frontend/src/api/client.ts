@@ -24,7 +24,18 @@ type Transaction = {
   createdAt: string
 }
 
-export type { Transaction }
+type EventRow = {
+  id: string
+  name: string
+  date: string
+  location: string
+  description: string
+  status: 'draft' | 'live' | 'archived'
+  bannerUrl: string | null
+  createdAt: string
+}
+
+export type { Transaction, EventRow }
 
 export const api = {
   health: () =>
@@ -44,14 +55,42 @@ export const api = {
     ),
 
   agentStatus: () =>
-    request<{ agents_running: number; model_loaded: boolean; note: string }>('/agent/status'),
+    request<{ aiAvailable: boolean; mock: boolean; agents: string[]; workflows: string[]; studio: string }>('/agent/status'),
 
   runAgent: (body: object) =>
-    request<{ task_id: string | null; status: string }>('/agent/run', {
+    request<{ status: string; runId: string }>('/agent/run', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
 
+  listEvents: () =>
+    request<EventRow[]>('/events'),
+
+  getEvent: (id: string) =>
+    request<EventRow & { tiers: { id: string; name: string; price: string; currency: string }[] }>(`/events/${id}`),
+
   createEvent: (formData: FormData) =>
-    multipart<{ id: string; name: string; tiers: unknown[] }>('/events', formData),
+    multipart<EventRow & { tiers: { id: string; name: string; price: string; currency: string }[] }>('/events', formData),
+
+  updateEvent: (id: string, body: Partial<{ name: string; date: string; location: string; description: string; status: string; ticketTiers: { id?: string; name: string; price: string; currency: string }[] }>) =>
+    request<EventRow & { tiers: { id: string; name: string; price: string; currency: string }[] }>(`/events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  getEventStats: (id: string) =>
+    request<{
+      event: EventRow;
+      tiers: Array<{
+        id: string; name: string; price: string; currency: string;
+        capacity: number | null; sold: number; remaining: number | null;
+        actualRevenue: string; projectedRevenue: string | null;
+      }>;
+      summary: {
+        totalSold: number;
+        totalActualRevenue: string;
+        totalCapacity: number | null;
+        totalProjectedRevenue: string | null;
+      };
+    }>(`/events/${id}/stats`),
 }
