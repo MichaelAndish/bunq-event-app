@@ -8,9 +8,9 @@ import { events, ticketTiers } from '../../db/schema'
 const validateDraftStep = createStep({
   id: 'validate-draft',
   description: 'Validate and normalise the event draft from the venue agent',
-  inputSchema: EventDraftSchema,
+  inputSchema:  EventDraftSchema,
   outputSchema: EventDraftSchema,
-  execute: async ({ inputData }: { inputData: z.infer<typeof EventDraftSchema> }) => ({
+  execute: async ({ inputData }) => ({
     ...inputData,
     ticketTiers: inputData.ticketTiers.map((t, i) => ({
       ...t,
@@ -23,9 +23,9 @@ const validateDraftStep = createStep({
 const persistEventStep = createStep({
   id: 'persist-event',
   description: 'Save the validated event and ticket tiers to the database',
-  inputSchema: EventDraftSchema,
+  inputSchema:  EventDraftSchema,
   outputSchema: z.object({ eventId: z.string().uuid() }),
-  execute: async ({ inputData }: { inputData: z.infer<typeof EventDraftSchema> }) => {
+  execute: async ({ inputData }) => {
     const [event] = await db.insert(events).values({
       name:        inputData.name,
       date:        inputData.date,
@@ -49,10 +49,10 @@ const persistEventStep = createStep({
 })
 
 // Workflow: validate → persist
-// (analysis happens in the route via generateObject, result is passed as trigger)
 export const createEventWorkflow = createWorkflow({
-  name: 'create-event',
-  triggerSchema: EventDraftSchema,
+  id:           'create-event',
+  inputSchema:  EventDraftSchema,
+  outputSchema: z.object({ eventId: z.string().uuid() }),
 })
   .then(validateDraftStep)
   .then(persistEventStep)

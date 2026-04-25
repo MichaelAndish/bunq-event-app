@@ -23,8 +23,9 @@ script:post-response {
   const body = res.body;
   if (body && body.Response) {
     const apiCredential = body.Response.find(r => r.ApiCredential);
-    if (apiCredential) {
-      console.log("Company apiKey:", apiCredential.ApiCredential.api_key);
+    if (apiCredential && apiCredential.ApiCredential.api_key) {
+      bru.setEnvVar("apiKey", apiCredential.ApiCredential.api_key);
+      console.log("Saved apiKey:", apiCredential.ApiCredential.api_key);
     }
   }
 }

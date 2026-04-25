@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { config } from './config'
 import { runMigrations } from './db/migrate'
+import { ensureBucket } from './storage/client'
 import healthRouter      from './routes/health'
 import eventsRouter      from './routes/events'
 import agentRouter       from './routes/agent'
@@ -33,10 +34,17 @@ async function main() {
     process.exit(1)
   }
 
+  try {
+    await ensureBucket()
+  } catch (err) {
+    console.warn('⚠️  Storage bucket setup failed (uploads will not work):', err)
+  }
+
   serve({ fetch: app.fetch, port: config.PORT }, () => {
     console.log(`🚀  bunq backend running on port ${config.PORT}`)
-    console.log(`    AI:   ${config.ANTHROPIC_API_KEY ? '✅ ready' : '⚠️  no key (using mock)'}`)
-    console.log(`    Bunq: ${config.BUNQ_API_KEY      ? '✅ ready' : '⚠️  no key (using mock)'}`)
+    console.log(`    AI:      ${config.ANTHROPIC_API_KEY ? '✅ ready' : '⚠️  no key (using mock)'}`)
+    console.log(`    Bunq:    ${(config.BUNQ_SESSION_TOKEN || config.BUNQ_API_KEY) ? '✅ ready' : '⚠️  no key (using mock)'}`)
+    console.log(`    Storage: ${config.STORAGE_ENDPOINT || 'AWS S3'} → bucket "${config.STORAGE_BUCKET}"`)
   })
 }
 

@@ -5,7 +5,7 @@ import { events, ticketTiers } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 
 export const createEventTool = createTool({
-  id: 'create-event',
+  id:          'create-event',
   description: 'Persist a new event and its ticket tiers to the database',
   inputSchema: z.object({
     name:        z.string(),
@@ -19,17 +19,17 @@ export const createEventTool = createTool({
     })),
   }),
   outputSchema: z.object({ eventId: z.string() }),
-  execute: async ({ context }) => {
+  execute: async (inputData) => {
     const [event] = await db.insert(events).values({
-      name:        context.name,
-      date:        context.date,
-      location:    context.location,
-      description: context.description,
+      name:        inputData.name,
+      date:        inputData.date,
+      location:    inputData.location,
+      description: inputData.description,
     }).returning({ id: events.id })
 
-    if (context.tiers.length > 0) {
+    if (inputData.tiers.length > 0) {
       await db.insert(ticketTiers).values(
-        context.tiers.map(t => ({
+        inputData.tiers.map((t: { name: string; price: string; currency: 'EUR' | 'USD' | 'GBP' }) => ({
           eventId:  event.id,
           name:     t.name,
           price:    t.price.replace(/[^0-9.]/g, ''),
@@ -43,16 +43,13 @@ export const createEventTool = createTool({
 })
 
 export const getEventTool = createTool({
-  id: 'get-event',
+  id:          'get-event',
   description: 'Fetch an event with its ticket tiers from the database',
-  inputSchema: z.object({ eventId: z.string().uuid() }),
-  outputSchema: z.object({
-    event: z.any(),
-    tiers: z.array(z.any()),
-  }),
-  execute: async ({ context }) => {
-    const [event] = await db.select().from(events).where(eq(events.id, context.eventId))
-    const tiers   = await db.select().from(ticketTiers).where(eq(ticketTiers.eventId, context.eventId))
+  inputSchema:  z.object({ eventId: z.string().uuid() }),
+  outputSchema: z.object({ event: z.any(), tiers: z.array(z.any()) }),
+  execute: async (inputData) => {
+    const [event] = await db.select().from(events).where(eq(events.id, inputData.eventId))
+    const tiers   = await db.select().from(ticketTiers).where(eq(ticketTiers.eventId, inputData.eventId))
     return { event, tiers }
   },
 })

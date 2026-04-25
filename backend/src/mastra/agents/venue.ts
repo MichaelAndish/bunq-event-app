@@ -2,7 +2,6 @@ import { Agent } from '@mastra/core/agent'
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod'
 import { createEventTool } from '../tools/events'
-import { config } from '../../config'
 
 export const EventDraftSchema = z.object({
   name:        z.string().describe('Event name'),
@@ -25,10 +24,10 @@ date, location, description, and 2-3 ticket tiers from what you see.
 Always use € for prices unless instructed otherwise.
 Format dates as human-friendly text like "Sat, 25 Apr • 20:00".`
 
-// Model is always required by Mastra — API key is validated at call time in the route
 export const venueAgent = new Agent({
-  name: 'venue-analysis',
-  model: anthropic('claude-opus-4-7'),
+  id:           'venue-analysis',
+  name:         'Venue Analysis Agent',
+  model:        anthropic('claude-opus-4-7'),
   instructions: INSTRUCTIONS,
-  tools: { createEventTool },
+  tools:        { createEventTool },
 })

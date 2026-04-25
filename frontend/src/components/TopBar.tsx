@@ -1,8 +1,8 @@
 import { ChevronLeftIcon, QRCodeIcon } from './Icons'
 
-type Props = { onBack?: () => void }
+type Props = { onBack?: () => void; name?: string }
 
-export default function TopBar({ onBack }: Props = {}) {
+export default function TopBar({ onBack, name }: Props = {}) {
   return (
     <div className="topbar">
       <div style={{ width: 36, flexShrink: 0 }}>
@@ -15,7 +15,7 @@ export default function TopBar({ onBack }: Props = {}) {
         )}
       </div>
 
-      <span className="topbar-company">Big Money Festivals B.V.</span>
+      {name && <span className="topbar-company">{name}</span>}
 
       <div className="topbar-icon-btn" style={{ flexShrink: 0, opacity: 0.35, cursor: 'not-allowed' }}>
         <QRCodeIcon size={22} color="#8e8e93" />

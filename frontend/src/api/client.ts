@@ -9,12 +9,33 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+type Transaction = {
+  id: string
+  amount: string
+  currency: string
+  description: string
+  counterparty: string
+  createdAt: string
+}
+
+export type { Transaction }
+
 export const api = {
   health: () =>
     request<{ status: string; service: string }>('/health'),
 
   clientStatus: () =>
-    request<{ connected: boolean; base_url: string; note: string }>('/client/status'),
+    request<{ connected: boolean; mock: boolean; baseUrl: string; userId: string; accountId: string; displayName: string }>('/client/status'),
+
+  clientBalance: (userId: string, accountId: string) =>
+    request<{ balance: string; currency: string; name: string; displayName: string }>(
+      `/client/balance?userId=${encodeURIComponent(userId)}&accountId=${encodeURIComponent(accountId)}`
+    ),
+
+  clientTransactions: (userId: string, accountId: string, count = 10) =>
+    request<Transaction[]>(
+      `/client/transactions?userId=${encodeURIComponent(userId)}&accountId=${encodeURIComponent(accountId)}&count=${count}`
+    ),
 
   agentStatus: () =>
     request<{ agents_running: number; model_loaded: boolean; note: string }>('/agent/status'),

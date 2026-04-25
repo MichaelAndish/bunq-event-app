@@ -30,7 +30,7 @@ script:post-response {
   if (body && body.Response) {
     const tokenObj = body.Response.find(r => r.Token);
     const serverKey = body.Response.find(r => r.ServerPublicKey);
-
+  
     if (tokenObj) {
       bru.setEnvVar("installationToken", tokenObj.Token.token);
       console.log("Saved installationToken:", tokenObj.Token.token.slice(0, 20) + "...");
@@ -46,18 +46,18 @@ tests {
   test("returns 200", function () {
     expect(res.status).to.equal(200);
   });
-
+  
   test("response has Token", function () {
     const tokenObj = res.body.Response.find(r => r.Token);
     expect(tokenObj).to.exist;
     expect(tokenObj.Token).to.have.property("token");
   });
-
+  
   test("response has ServerPublicKey", function () {
     const serverKey = res.body.Response.find(r => r.ServerPublicKey);
     expect(serverKey).to.exist;
   });
-
+  
   test("installationToken saved to env", function () {
     const token = bru.getEnvVar("installationToken");
     expect(token).to.be.a("string").and.have.length.above(10);

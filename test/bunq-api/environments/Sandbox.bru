@@ -1,18 +1,57 @@
 vars {
   sandboxBaseUrl: https://public-api.sandbox.bunq.com/v1
-  apiKey:
-  installationToken:
-  serverPublicKey:
-  sessionToken:
-  userId:
-  accountId:
-  privateKeyPem:
-  publicKeyPem:
+  apiKey: 
+  installationToken: 
+  serverPublicKey: 
+  sessionToken: 
+  userId: 
+  accountId: 
+  privateKeyPem: '''
+    -----BEGIN PRIVATE KEY-----
+    MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDgmHzdXvOTPKWi
+    jP0HIxW5M1dqc3HW05uXpcsQmFBs9YzFEo7vQ2BnnDXrrLPr/omFW75Kvw+jS5BG
+    5QQ/Eo/keCiYJoDYKwKyP6u3PVJga1aRRmRh1RGFYxmWvKMY8suILpkiHnXAMWeH
+    yG278fev1VXMlsvO5DXtV/ZtAFM3c1SeBtEeRzk7KfZDOoUZCY4NLSbqzntQBbGe
+    DHiYVe9Z4MndAFmHaxj8xOF+OBqExkVdQ3Kws12nXFnNRpGj7JeaugpXyeBLRULU
+    KKcGZ+9bqrqCSlJpJxP70NfcEdjUCtv6HE6o7lHdbaFqRvqMkp1/2sSRfRyU0CNL
+    nz83HUPNAgMBAAECggEAUIMpg9wFejsr72UWUagooe7/P8hpv0a1SLwk2uqXLjAq
+    Sf1Yovnmxc2wYK9VAl0JZHaadUYfr3ynmFqB1rBrR84xUzW+S3/DpC2B+5qufKUN
+    798png6ZDNWVNz2hRBDJmKSHvbzonkC3qevWNqFLlstlygUmw6B4moBFdRbAPihc
+    VfP65E+NtEd8gdw/zbA8T3rM9/8XkyYlAcq3+AqPkB6659Je9+aHOY9/ZJNT+/Q0
+    5sWS3+ODlN1Sf9b6TghiOYKpsqPqkUwCpx8EPDNzFX53Ka9QrP4Lcf0nqiHdg/A6
+    jc3L0gdUZXu6ThK6FgAaiSKsElXe/E2gU1z1CoXT2wKBgQD5z2cyDMUSQCWTfyfu
+    6vM/DAq0ocXZlbsE22JLX9DT78a2UgqxwCF4Jf+BDrQYVNcXeKcbzzN4Wp02VHoq
+    LZSWFHh4xei2ObfvcZD70znAjL0z0nrjePfy6elbRQwNabDsUr6K4u/lL/6wpNb1
+    IpqqAHTpapPM6npZg9DM8id9swKBgQDmKSTSztDwsJzkVX8J/XdIfy4coQuOhQ8s
+    DjgzU1Suaz+OFfQ5iiyEPWHUvtXUqHW4t2EJzzSStGQX3uJAFO0Du27TVUmfY+hu
+    2UFCkW8q0LhEYnMsUBgGB5K5voA0qwq9UQG0BM+wj2EMs5PhVpILpFiZGhvDuTaW
+    +Z4HOf54fwKBgQDo57QA9+LtBx2BjPYATNGJIIMCsikymeUJvDjCqYybbFxKM+eA
+    ne8Wg+bZvomufbskSPsUdHQ6a9FTjCNyG5kC7Ab+Ixa6fsm81pckEmUv3oewPzcP
+    ygLyWZ+V1qRMBRRM4UCBYN/lQIAm1SkM17x3b4GQ9irizGJR/xG3YrXq/QKBgH9l
+    /tABUn4oBHAPMwagmkoyu591NSRqWn+UT195nMH+82r+k/TVmtaH84MDLvFLXf4k
+    4z2+x+b8mvrrkGjQLHGIakvoRZxIfPv+nbTvM42LgrO3mvDIVMPhpUHTRLvigUtR
+    b5PppdyhQKL7M7vjY2u2SKRWY0/vUVw4R1TQsR6ZAoGAGH//QmYPebcIdZgPoZAI
+    z4aRGYMsA76L4xDsFjNsoI2Bo/N0N2Eye/IHRaVLlqi6S7URx936E5ijFXBGP4Fs
+    gz/WR6o80x3XCHJh8RRfbwf/+QeGTzdrQ9oTqCl8bXiN1FykuPewsh5RFYYJw5HQ
+    wbyciSdlPHJFmnQ0kqwg7Yo=
+    -----END PRIVATE KEY-----
+  '''
+  publicKeyPem: '''
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4Jh83V7zkzylooz9ByMV
+    uTNXanNx1tObl6XLEJhQbPWMxRKO70NgZ5w166yz6/6JhVu+Sr8Po0uQRuUEPxKP
+    5HgomCaA2CsCsj+rtz1SYGtWkUZkYdURhWMZlryjGPLLiC6ZIh51wDFnh8htu/H3
+    r9VVzJbLzuQ17Vf2bQBTN3NUngbRHkc5Oyn2QzqFGQmODS0m6s57UAWxngx4mFXv
+    WeDJ3QBZh2sY/MThfjgahMZFXUNysLNdp1xZzUaRo+yXmroKV8ngS0VC1CinBmfv
+    W6q6gkpSaScT+9DX3BHY1Arb+hxOqO5R3W2hakb6jJKdf9rEkX0clNAjS58/Nx1D
+    zQIDAQAB
+    -----END PUBLIC KEY-----
+    
+  '''
   counterpartyIban: NL66BUNQ2025070115
   counterpartyName: Sugardaddy
-  tabUuid:
+  tabUuid: 
 }
-
 vars:secret [
   apiKey,
   installationToken,

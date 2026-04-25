@@ -18,7 +18,7 @@ router.get('/', async (c) => {
     env:     config.NODE_ENV,
     db:      dbStatus,
     ai:      config.ANTHROPIC_API_KEY ? 'configured' : 'missing key',
-    bunq:    config.BUNQ_API_KEY      ? 'configured' : 'missing key',
+    bunq:    (config.BUNQ_SESSION_TOKEN || config.BUNQ_API_KEY) ? 'configured' : 'missing key',
   })
 })
 

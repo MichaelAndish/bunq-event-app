@@ -1,7 +1,11 @@
 .env
+*.pem
+.bunq/
 __pycache__/
 *.pyc
 *.pyo
 node_modules/
 dist/
 .venv/
+.history/
+.claude/

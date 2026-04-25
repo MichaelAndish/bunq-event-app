@@ -22,10 +22,11 @@ headers {
 script:post-response {
   const body = res.body;
   if (body && body.Response) {
-    const apiCredential = body.Response.find(r => r.ApiCredential);
-    if (apiCredential) {
-      bru.setEnvVar("apiKey", apiCredential.ApiCredential.api_key);
-      console.log("Saved apiKey:", apiCredential.ApiCredential.api_key);
+    const item = body.Response.find((r) => r.ApiKey || r.ApiCredential);
+    const cred = item && (item.ApiKey || item.ApiCredential);
+    if (cred && cred.api_key) {
+      bru.setEnvVar("apiKey", cred.api_key);
+      console.log("Saved apiKey:", cred.api_key);
     }
   }
 }
@@ -40,9 +41,10 @@ tests {
     expect(res.body.Response).to.be.an("array");
   });
 
-  test("contains ApiCredential with api_key", function () {
-    const apiCredential = res.body.Response.find(r => r.ApiCredential);
-    expect(apiCredential).to.exist;
-    expect(apiCredential.ApiCredential).to.have.property("api_key");
+  test("contains ApiKey (or ApiCredential) with api_key", function () {
+    const row = res.body.Response.find((r) => r.ApiKey || r.ApiCredential);
+    expect(row).to.exist;
+    const cred = row.ApiKey || row.ApiCredential;
+    expect(cred).to.have.property("api_key");
   });
 }

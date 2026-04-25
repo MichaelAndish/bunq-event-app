@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { mastra } from '../mastra'
 import { EventDraftSchema, type EventDraft } from '../mastra/agents/venue'
 import { config } from '../config'
+import { uploadFile } from '../storage/client'
 
 const router = new Hono()
 
@@ -61,26 +62,37 @@ router.post('/analyze-venue', async (c) => {
     }
   }
 
-  // Fall back to mock if no API key configured
-  if (!config.ANTHROPIC_API_KEY) {
-    return c.json(MOCK_DRAFT)
-  }
-
-  // Build message content — only images go to Claude (no video support yet)
+  // Upload images to storage and collect buffers for Claude
   type ContentPart =
     | { type: 'text';  text: string }
     | { type: 'image'; image: ArrayBuffer; mimeType: string }
 
   const content: ContentPart[] = []
+  const uploadedUrls: string[]  = []
 
   for (const file of rawFiles) {
-    if (ALLOWED_IMAGE_TYPES.has(file.type.toLowerCase())) {
-      content.push({
-        type:     'image',
-        image:    await file.arrayBuffer(),
-        mimeType: file.type,
-      })
+    const ct = file.type.toLowerCase()
+    if (!ALLOWED_IMAGE_TYPES.has(ct)) continue
+
+    const buffer = Buffer.from(await file.arrayBuffer())
+
+    // Store every image regardless of whether AI is configured
+    try {
+      const url = await uploadFile(buffer, ct, 'venues')
+      uploadedUrls.push(url)
+    } catch (err) {
+      console.warn('Image upload failed, continuing without storage:', err)
     }
+
+    // Buffer is reused for Claude below (ArrayBuffer from the same data)
+    content.push({ type: 'image', image: buffer.buffer as ArrayBuffer, mimeType: ct })
+  }
+
+  const bannerUrl = uploadedUrls[0] ?? undefined
+
+  // Fall back to mock if no API key configured
+  if (!config.ANTHROPIC_API_KEY) {
+    return c.json({ ...MOCK_DRAFT, ...(bannerUrl ? { bannerUrl } : {}) })
   }
 
   content.push({
@@ -95,10 +107,10 @@ router.post('/analyze-venue', async (c) => {
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: content as any }],
     })
-    return c.json(object)
+    return c.json({ ...object, ...(bannerUrl ? { bannerUrl } : {}) })
   } catch (err) {
     console.error('AI analysis failed:', err)
-    return c.json(MOCK_DRAFT)
+    return c.json({ ...MOCK_DRAFT, ...(bannerUrl ? { bannerUrl } : {}) })
   }
 })
 
@@ -125,12 +137,11 @@ router.post('/run', async (c) => {
 
 // GET /agent/status
 router.get('/status', async (c) => {
-  const agentNames    = Object.keys(mastra.getAgents?.() ?? {})
-  const workflowNames = Object.keys(mastra.getWorkflows?.() ?? {})
   return c.json({
-    agents:    agentNames,
-    workflows: workflowNames,
+    agents:    ['venueAgent'],
+    workflows: ['createEventWorkflow'],
     ai:        config.ANTHROPIC_API_KEY ? 'ready' : 'no key',
+    studio:    'http://localhost:4111',
   })
 })
 

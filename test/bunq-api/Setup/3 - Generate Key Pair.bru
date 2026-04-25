@@ -5,45 +5,49 @@ meta {
 }
 
 get {
-  url: {{sandboxBaseUrl}}/health
+  url: {{sandboxBaseUrl}}/installation
   body: none
   auth: none
 }
 
-docs {
-  # Generate RSA Key Pair
-
-  Run this request's pre-request script to generate an RSA-2048 key pair and save it to env vars.
-  The actual HTTP call (GET /health) is a no-op placeholder — the real work is in the pre-request script.
-
-  After running this, copy the `publicKeyPem` and `privateKeyPem` env var values if you need to back them up.
-  The private key is used to sign Payment requests (Bunq requires a signature for those).
+headers {
+  X-Bunq-Client-Request-Id: keypair-check-{{$timestamp}}
+  X-Bunq-Language: en_US
+  X-Bunq-Region: nl_NL
+  X-Bunq-Geolocation: 0 0 0 0 000
+  User-Agent: BunqSandboxCollection/1.0
 }
 
-script:pre-request {
-  const crypto = require("crypto");
+docs {
+  # RSA key pair (no Bruno script — use OpenSSL)
 
-  const existing = bru.getEnvVar("privateKeyPem");
-  if (existing && existing.trim().length > 0) {
-    console.log("Key pair already exists, skipping generation.");
-  } else {
-    const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", {
-      modulusLength: 2048,
-      publicKeyEncoding:  { type: "spki",  format: "pem" },
-      privateKeyEncoding: { type: "pkcs8", format: "pem" },
-    });
+  Bruno’s request scripts cannot use Node’s `crypto` module in safe mode. Generate PEM keys on your machine, then paste them into the **Sandbox** environment as `privateKeyPem` and `publicKeyPem` (Bruno UI: collection → Environments → Sandbox).
 
-    bru.setEnvVar("privateKeyPem", privateKey);
-    bru.setEnvVar("publicKeyPem", publicKey);
-    console.log("Generated new RSA key pair and saved to env.");
-    console.log("Public key (first 60 chars):", publicKey.slice(0, 60));
-  }
+  **Generate a 2048-bit RSA key pair:**
+
+  ```bash
+  openssl genrsa -out bunq-client-private.pem 2048
+  openssl rsa -in bunq-client-private.pem -pubout -out bunq-client-public.pem
+  ```
+
+  Copy the full file contents (including `-----BEGIN … KEY-----` lines) into the env vars. Keep newlines as in the PEM files.
+
+  If you run `bru run` on the whole Setup folder, set `privateKeyPem` / `publicKeyPem` in the Sandbox environment **before** this step — they are no longer filled by a script.
+
+  **This request:** `GET /installation` without credentials returns **403** from bunq — that response confirms the sandbox host is reachable. It does not create keys or an installation.
+
+  The private key is used later to sign Payment requests (`X-Bunq-Client-Signature`). Back up `privateKeyPem` if you need to reuse the same installation.
 }
 
 tests {
-  test("key pair is set in env", function () {
+  test("sandbox API is reachable", function () {
+    expect(res.status).to.equal(403);
+    expect(res.body).to.have.property("Error");
+  });
+
+  test("RSA PEMs are present in environment", function () {
     const priv = bru.getEnvVar("privateKeyPem");
-    const pub  = bru.getEnvVar("publicKeyPem");
+    const pub = bru.getEnvVar("publicKeyPem");
     expect(priv).to.be.a("string").and.include("PRIVATE KEY");
     expect(pub).to.be.a("string").and.include("PUBLIC KEY");
   });
