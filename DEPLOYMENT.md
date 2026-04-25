@@ -11,18 +11,18 @@ Every push to `main` builds, deploys, and rotates credentials automatically.
 ┌─────────────────────────────────────────────────────────────────┐
 │  Developer / GitHub Actions                                     │
 │                                                                 │
-│  git push main  ──▶  GitHub Actions (OIDC token)               │
+│  git push main  ──▶  GitHub Actions (OIDC token)                │
 │                             │                                   │
 │                             ▼                                   │
 │                    AWS IAM (assumes deploy role)                │
 │                             │                                   │
-│         ┌───────────────────┼────────────────────┐             │
-│         ▼                   ▼                    ▼             │
-│   Secrets Manager      ECR push             S3 sync            │
+│         ┌───────────────────┼────────────────────┐              │
+│         ▼                   ▼                    ▼              │
+│   Secrets Manager      ECR push             S3 sync             │
 │   (bunq/production     (backend             (frontend           │
-│    bunq/infra)          bunq-mastra)         static files)      │
-│                             │                    │             │
-│                             ▼                    ▼             │
+│    bunq/infra)          bunq-mastra)         static files)       │
+│                             │                    │              │
+│                             ▼                    ▼              │
 │                     App Runner              CloudFront          │
 │                     (backend :9191          (CDN cache          │
 │                      mastra  :4111)          invalidated)       │

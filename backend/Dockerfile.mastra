@@ -1,12 +1,13 @@
-# ── Stage 1: build (needs devDeps for TypeScript) ────────────────────────────
+# ── Stage 1: build (needs devDeps for TypeScript + mastra build) ─────────────
 FROM node:22-alpine AS build
 
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --production=false
 COPY . .
-# Pre-compile so the runtime image has no TypeScript toolchain
-RUN npx tsc --noEmit 2>/dev/null || true
+
+# Compile the Mastra application for production
+RUN npx mastra build --dir src/mastra
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM node:22-alpine AS runtime
@@ -14,11 +15,16 @@ FROM node:22-alpine AS runtime
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
-COPY --from=build /app/src ./src
+
+# Copy only the compiled Mastra output (no TypeScript source needed)
+COPY --from=build /app/.mastra ./.mastra
 
 # Do NOT COPY .env* — all env vars are injected at runtime via App Runner
 # RuntimeEnvironmentVariables (or docker-compose env_file for local dev).
 
 EXPOSE 4111
-# Use 'start' not 'dev' — 'dev' is hot-reload mode and shouldn't run in production
-CMD ["npx", "mastra", "start", "--dir", "src/mastra"]
+ENV PORT=4111
+ENV NODE_ENV=production
+
+# Production: run the compiled Mastra server directly
+CMD ["node", ".mastra/output/index.mjs"]
