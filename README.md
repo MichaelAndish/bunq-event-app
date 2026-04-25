@@ -16,7 +16,9 @@ The idea works also for casual events.
 
 Create a pizza night event, invite your friends and split exenses fairly with AI.
 
-bunq events give you the financial intelligence for impactful events.
+bunq events give you financial intelligence for events.
+
+Are you ready to attract the world? 
 
 ---
 
