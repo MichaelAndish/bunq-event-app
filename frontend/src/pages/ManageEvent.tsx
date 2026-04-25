@@ -23,6 +23,7 @@ export default function ManageEvent({ mock, eventId, onBack, onNavigate }: Props
   const [date,        setDate]        = useState(mock ? 'Sat, 25 Apr • 14:00' : '')
   const [location,    setLocation]    = useState(mock ? 'bunq HQ'             : '')
   const [description, setDescription] = useState('')
+  const [bannerUrl,   setBannerUrl]   = useState<string | null>(null)
   const [loading,     setLoading]     = useState(false)
   const [saving,      setSaving]      = useState(false)
   const [saveError,   setSaveError]   = useState('')
@@ -36,6 +37,7 @@ export default function ManageEvent({ mock, eventId, onBack, onNavigate }: Props
         setDate(e.date)
         setLocation(e.location)
         setDescription(e.description ?? '')
+        setBannerUrl(e.bannerUrl)
         setTiers(e.tiers.map(t => ({
           id:    t.id,
           name:  t.name,
@@ -96,7 +98,7 @@ export default function ManageEvent({ mock, eventId, onBack, onNavigate }: Props
     <div>
       <TopBar onBack={onBack} />
 
-      <div className="event-hero">
+      <div className="event-hero" style={bannerUrl ? { backgroundImage: `url(${bannerUrl})` } : undefined}>
         <button className="edit-image-btn">
           <EditImageIcon size={16} color="#fff" />
           Edit image

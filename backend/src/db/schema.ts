@@ -12,6 +12,7 @@ export const events = pgTable('events', {
   location:    text('location').notNull(),
   description: text('description').default(''),
   bannerUrl:   text('banner_url'),
+  mediaUrls:   text('media_urls').array().default([]),
   status:      eventStatusEnum('status').default('draft'),
   createdAt:   timestamp('created_at', { withTimezone: true }).defaultNow(),
 })

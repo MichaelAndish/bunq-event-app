@@ -128,23 +128,32 @@ router.post('/', async (c) => {
 
     const eventId = randomUUID()
 
-    // Upload banner + venue media to events/{eventId}/ prefix
     const bannerFile = formData.get('banner') instanceof File ? formData.get('banner') as File : null
     const mediaFiles = formData.getAll('media').filter(v => v instanceof File) as File[]
-    const allFiles   = [...(bannerFile ? [bannerFile] : []), ...mediaFiles]
 
-    const uploadResults = await Promise.allSettled(
-      allFiles
-        .filter(f => ALLOWED_IMAGE_TYPES.has(f.type.toLowerCase()) && f.size <= MAX_IMAGE_BYTES)
-        .map(async f => uploadFile(Buffer.from(await f.arrayBuffer()), f.type.toLowerCase(), `events/${eventId}`))
-    )
-    const uploadedUrls = uploadResults
-      .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
+    const isImage = (f: File) => ALLOWED_IMAGE_TYPES.has(f.type.toLowerCase()) && f.size <= MAX_IMAGE_BYTES
+
+    // Upload banner and all media files in parallel, scoped to this event
+    const [bannerUpload, ...mediaUploads] = await Promise.allSettled([
+      ...(bannerFile && isImage(bannerFile)
+        ? [bannerFile.arrayBuffer().then(buf =>
+            uploadFile(Buffer.from(buf), bannerFile.type.toLowerCase(), `events/${eventId}/banner`))]
+        : [Promise.resolve(null)]),
+      ...mediaFiles.filter(isImage).map(f =>
+        f.arrayBuffer().then(buf =>
+          uploadFile(Buffer.from(buf), f.type.toLowerCase(), `events/${eventId}/media`)
+        )
+      ),
+    ])
+
+    const uploadedBannerUrl = bannerUpload.status === 'fulfilled' ? bannerUpload.value : null
+    const uploadedMediaUrls = mediaUploads
+      .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled' && typeof r.value === 'string')
       .map(r => r.value)
 
     const { data: d } = draft
-    // Use uploaded file URL first; fall back to pre-uploaded URL passed from AI step
-    const bannerUrl = uploadedUrls[0] ?? d.bannerUrl
+    // Banner priority: new file upload > pre-uploaded URL from AI analyze step
+    const bannerUrl = uploadedBannerUrl ?? d.bannerUrl ?? null
     await db.insert(events).values({
       id:          eventId,
       creatorId:   d.creatorId,
@@ -152,7 +161,8 @@ router.post('/', async (c) => {
       date:        d.date,
       location:    d.location,
       description: d.description,
-      bannerUrl,
+      bannerUrl:   bannerUrl ?? undefined,
+      mediaUrls:   uploadedMediaUrls,
     })
 
     if (d.ticketTiers.length > 0) {

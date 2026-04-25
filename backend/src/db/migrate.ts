@@ -32,8 +32,9 @@ export async function runMigrations(): Promise<void> {
         created_at  TIMESTAMPTZ  DEFAULT NOW()
       );
 
-      -- Idempotent: adds creator_id to tables created before this migration was introduced
+      -- Idempotent column additions
       ALTER TABLE events ADD COLUMN IF NOT EXISTS creator_id UUID;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS media_urls TEXT[] DEFAULT '{}';
 
       CREATE TABLE IF NOT EXISTS ticket_tiers (
         id        UUID    PRIMARY KEY DEFAULT gen_random_uuid(),

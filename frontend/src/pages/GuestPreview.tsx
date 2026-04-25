@@ -23,6 +23,7 @@ export default function GuestPreview({ mock, eventId, onBack, onNavigate, onSele
   const [eventName,     setEventName]     = useState('')
   const [eventDate,     setEventDate]     = useState('')
   const [eventLocation, setEventLocation] = useState('')
+  const [bannerUrl,     setBannerUrl]     = useState<string | null>(null)
   const [tiers,         setTiers]         = useState<Tier[]>([])
   const [loading,       setLoading]       = useState(false)
 
@@ -34,6 +35,7 @@ export default function GuestPreview({ mock, eventId, onBack, onNavigate, onSele
         setEventName(e.name)
         setEventDate(e.date)
         setEventLocation(e.location)
+        setBannerUrl(e.bannerUrl)
         setTiers(e.tiers)
       })
       .catch(() => {})
@@ -54,7 +56,7 @@ export default function GuestPreview({ mock, eventId, onBack, onNavigate, onSele
 
   if (!mock && loading) return (
     <div>
-      <div className="event-hero">
+      <div className="event-hero" style={bannerUrl ? { backgroundImage: `url(${bannerUrl})` } : undefined}>
         <button className="topbar-back-btn guest-hero-back" onClick={onBack}>
           <ChevronLeftIcon size={18} color="#fff" />
         </button>
@@ -73,7 +75,7 @@ export default function GuestPreview({ mock, eventId, onBack, onNavigate, onSele
   // Real event view
   if (!mock) return (
     <div>
-      <div className="event-hero">
+      <div className="event-hero" style={bannerUrl ? { backgroundImage: `url(${bannerUrl})` } : undefined}>
         <button className="topbar-back-btn guest-hero-back" onClick={onBack}>
           <ChevronLeftIcon size={18} color="#fff" />
         </button>

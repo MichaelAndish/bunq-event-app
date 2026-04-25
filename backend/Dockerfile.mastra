@@ -5,5 +5,8 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 
+# Copy .env if provided in build context
+COPY --chown=node:node .env* ./
+
 EXPOSE 4111
 CMD ["npx", "mastra", "dev", "--dir", "src/mastra"]

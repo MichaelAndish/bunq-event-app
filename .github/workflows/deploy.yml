@@ -9,14 +9,99 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
 
 jobs:
-  # ── 1. Backend + Mastra Docker images → ECR ──────────────────────────────
+  # ── 0. Generate .env from secrets (shared artifact) ──────────────────────
+  generate-env:
+    name: Generate .env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write .env from secrets
+        run: |
+          cat > .env << 'ENVEOF'
+          NODE_ENV=production
+          PORT=9191
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+          BUNQ_API_KEY=${{ secrets.BUNQ_API_KEY }}
+          BUNQ_INSTALLATION_TOKEN=${{ secrets.BUNQ_INSTALLATION_TOKEN }}
+          BUNQ_SESSION_TOKEN=${{ secrets.BUNQ_SESSION_TOKEN }}
+          BUNQ_USER_ID=${{ secrets.BUNQ_USER_ID }}
+          BUNQ_DEFAULT_MONETARY_ACCOUNT_ID=${{ secrets.BUNQ_ACCOUNT_ID }}
+          BUNQ_PRIVATE_KEY=${{ secrets.BUNQ_PRIVATE_KEY }}
+          BUNQ_API_BASE_URL=https://public-api.sandbox.bunq.com/v1
+          BUNQ_USE_MOCK=false
+          STORAGE_ENDPOINT=${{ secrets.STORAGE_ENDPOINT }}
+          STORAGE_BUCKET=${{ secrets.STORAGE_BUCKET }}
+          STORAGE_ACCESS_KEY=${{ secrets.STORAGE_ACCESS_KEY }}
+          STORAGE_SECRET_KEY=${{ secrets.STORAGE_SECRET_KEY }}
+          STORAGE_PUBLIC_URL=${{ secrets.STORAGE_PUBLIC_URL }}
+          STORAGE_FORCE_PATH_STYLE=false
+          STORAGE_REGION=${{ env.AWS_REGION }}
+          ENVEOF
+          echo "✅ .env generated ($(wc -l < .env) lines)"
+
+      - name: Upload .env artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: env-file
+          path: .env
+          retention-days: 1
+
+  # ── 1. Refresh bunq session token ────────────────────────────────────────
+  refresh-bunq-session:
+    name: Refresh bunq session token
+    needs: generate-env
+    runs-on: ubuntu-latest
+    outputs:
+      session_token: ${{ steps.refresh.outputs.session_token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download .env
+        uses: actions/download-artifact@v4
+        with:
+          name: env-file
+
+      - name: Set private key file
+        run: |
+          mkdir -p .bunq
+          printf '%s' "${{ secrets.BUNQ_PRIVATE_KEY }}" > .bunq/client-private.pem
+          chmod 600 .bunq/client-private.pem
+          # Point config at the written key
+          echo "BUNQ_PRIVATE_KEY_PATH=.bunq/client-private.pem" >> .env
+
+      - name: Refresh session
+        id: refresh
+        run: |
+          node scripts/bunq-provision.mjs --refresh-session --write-env .env
+          SESSION=$(grep '^BUNQ_SESSION_TOKEN=' .env | cut -d= -f2-)
+          echo "session_token=$SESSION" >> "$GITHUB_OUTPUT"
+          echo "✅ Session refreshed"
+
+      - name: Upload refreshed .env
+        uses: actions/upload-artifact@v4
+        with:
+          name: env-file-refreshed
+          path: .env
+          retention-days: 1
+
+  # ── 2. Build backend + Mastra Docker images → ECR ────────────────────────
   build-push-backend:
     name: Build & push backend image
+    needs: refresh-bunq-session
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.meta.outputs.image }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download refreshed .env
+        uses: actions/download-artifact@v4
+        with:
+          name: env-file-refreshed
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -26,7 +111,6 @@ jobs:
           aws-region:            ${{ env.AWS_REGION }}
 
       - name: Login to ECR
-        id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build & push
@@ -35,6 +119,7 @@ jobs:
           REPO: ${{ secrets.BACKEND_ECR_REPO }}
           SHA:  ${{ github.sha }}
         run: |
+          cp .env backend/.env
           docker build -f backend/Dockerfile.prod -t $REPO:$SHA -t $REPO:latest backend
           docker push $REPO:$SHA
           docker push $REPO:latest
@@ -42,11 +127,17 @@ jobs:
 
   build-push-mastra:
     name: Build & push Mastra image
+    needs: refresh-bunq-session
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.meta.outputs.image }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download refreshed .env
+        uses: actions/download-artifact@v4
+        with:
+          name: env-file-refreshed
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -64,12 +155,13 @@ jobs:
           REPO: ${{ secrets.MASTRA_ECR_REPO }}
           SHA:  ${{ github.sha }}
         run: |
+          cp .env backend/.env
           docker build -f backend/Dockerfile.mastra -t $REPO:$SHA -t $REPO:latest backend
           docker push $REPO:$SHA
           docker push $REPO:latest
           echo "image=$REPO:$SHA" >> "$GITHUB_OUTPUT"
 
-  # ── 2. Frontend → S3 + CloudFront ────────────────────────────────────────
+  # ── 3. Frontend → S3 + CloudFront ────────────────────────────────────────
   deploy-frontend:
     name: Deploy frontend to S3
     runs-on: ubuntu-latest
@@ -99,10 +191,12 @@ jobs:
 
       - name: Sync to S3
         run: |
+          # Assets (hashed filenames) — long cache
           aws s3 sync frontend/dist/ s3://${{ secrets.S3_FRONTEND_BUCKET }}/ \
             --delete \
             --cache-control "public,max-age=31536000,immutable" \
             --exclude "index.html"
+          # HTML — no cache (always fetch fresh for SPA routing)
           aws s3 cp frontend/dist/index.html s3://${{ secrets.S3_FRONTEND_BUCKET }}/index.html \
             --cache-control "no-cache,no-store,must-revalidate"
 
@@ -112,10 +206,10 @@ jobs:
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/*"
 
-  # ── 3. Deploy backend App Runner service ─────────────────────────────────
+  # ── 4. Deploy backend App Runner service ─────────────────────────────────
   deploy-backend:
     name: Deploy backend to App Runner
-    needs: build-push-backend
+    needs: [build-push-backend, refresh-bunq-session]
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials
@@ -127,8 +221,9 @@ jobs:
 
       - name: Update App Runner service
         env:
-          SERVICE_ARN: ${{ secrets.BACKEND_APP_RUNNER_SERVICE_ARN }}
-          IMAGE:       ${{ needs.build-push-backend.outputs.image }}
+          SERVICE_ARN:   ${{ secrets.BACKEND_APP_RUNNER_SERVICE_ARN }}
+          IMAGE:         ${{ needs.build-push-backend.outputs.image }}
+          SESSION_TOKEN: ${{ needs.refresh-bunq-session.outputs.session_token }}
         run: |
           aws apprunner update-service \
             --service-arn "$SERVICE_ARN" \
@@ -139,33 +234,33 @@ jobs:
                 \"ImageConfiguration\": {
                   \"Port\": \"9191\",
                   \"RuntimeEnvironmentVariables\": {
-                    \"DATABASE_URL\":             \"${{ secrets.DATABASE_URL }}\",
-                    \"ANTHROPIC_API_KEY\":         \"${{ secrets.ANTHROPIC_API_KEY }}\",
-                    \"BUNQ_API_KEY\":             \"${{ secrets.BUNQ_API_KEY }}\",
-                    \"BUNQ_INSTALLATION_TOKEN\":  \"${{ secrets.BUNQ_INSTALLATION_TOKEN }}\",
-                    \"BUNQ_DEVICE_ID\":           \"${{ secrets.BUNQ_DEVICE_ID }}\",
-                    \"BUNQ_SESSION_TOKEN\":        \"${{ secrets.BUNQ_SESSION_TOKEN }}\",
-                    \"BUNQ_USER_ID\":             \"${{ secrets.BUNQ_USER_ID }}\",
-                    \"BUNQ_ACCOUNT_ID\":          \"${{ secrets.BUNQ_ACCOUNT_ID }}\",
-                    \"BUNQ_USE_MOCK\":            \"false\",
-                    \"STORAGE_ENDPOINT\":          \"${{ secrets.STORAGE_ENDPOINT }}\",
-                    \"STORAGE_ACCESS_KEY\":         \"${{ secrets.STORAGE_ACCESS_KEY }}\",
-                    \"STORAGE_SECRET_KEY\":         \"${{ secrets.STORAGE_SECRET_KEY }}\",
-                    \"STORAGE_BUCKET\":            \"${{ secrets.STORAGE_BUCKET }}\",
-                    \"STORAGE_PUBLIC_URL\":        \"${{ secrets.STORAGE_PUBLIC_URL }}\",
-                    \"STORAGE_FORCE_PATH_STYLE\": \"false\",
-                    \"STORAGE_REGION\":            \"${{ env.AWS_REGION }}\",
-                    \"PORT\":                     \"9191\",
-                    \"NODE_ENV\":                 \"production\"
+                    \"DATABASE_URL\":                       \"${{ secrets.DATABASE_URL }}\",
+                    \"ANTHROPIC_API_KEY\":                   \"${{ secrets.ANTHROPIC_API_KEY }}\",
+                    \"BUNQ_API_KEY\":                       \"${{ secrets.BUNQ_API_KEY }}\",
+                    \"BUNQ_INSTALLATION_TOKEN\":            \"${{ secrets.BUNQ_INSTALLATION_TOKEN }}\",
+                    \"BUNQ_PRIVATE_KEY\":                   \"${{ secrets.BUNQ_PRIVATE_KEY }}\",
+                    \"BUNQ_SESSION_TOKEN\":                  \"$SESSION_TOKEN\",
+                    \"BUNQ_USER_ID\":                       \"${{ secrets.BUNQ_USER_ID }}\",
+                    \"BUNQ_DEFAULT_MONETARY_ACCOUNT_ID\":   \"${{ secrets.BUNQ_ACCOUNT_ID }}\",
+                    \"BUNQ_USE_MOCK\":                      \"false\",
+                    \"STORAGE_ENDPOINT\":                    \"${{ secrets.STORAGE_ENDPOINT }}\",
+                    \"STORAGE_ACCESS_KEY\":                  \"${{ secrets.STORAGE_ACCESS_KEY }}\",
+                    \"STORAGE_SECRET_KEY\":                  \"${{ secrets.STORAGE_SECRET_KEY }}\",
+                    \"STORAGE_BUCKET\":                     \"${{ secrets.STORAGE_BUCKET }}\",
+                    \"STORAGE_PUBLIC_URL\":                 \"${{ secrets.STORAGE_PUBLIC_URL }}\",
+                    \"STORAGE_FORCE_PATH_STYLE\":           \"false\",
+                    \"STORAGE_REGION\":                     \"${{ env.AWS_REGION }}\",
+                    \"PORT\":                               \"9191\",
+                    \"NODE_ENV\":                           \"production\"
                   }
                 }
               }
             }"
 
-  # ── 4. Deploy Mastra App Runner service ──────────────────────────────────
+  # ── 5. Deploy Mastra App Runner service ──────────────────────────────────
   deploy-mastra:
     name: Deploy Mastra to App Runner
-    needs: build-push-mastra
+    needs: [build-push-mastra, refresh-bunq-session]
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials

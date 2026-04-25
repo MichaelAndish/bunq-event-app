@@ -32,6 +32,7 @@ type EventRow = {
   description: string
   status: 'draft' | 'live' | 'archived'
   bannerUrl: string | null
+  mediaUrls: string[]
   createdAt: string
 }
 

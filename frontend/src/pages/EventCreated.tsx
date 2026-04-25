@@ -72,6 +72,7 @@ export default function EventCreated({ mock, eventId, onNavigate }: Props) {
   const displayName     = mock ? 'bunq demo day'       : (event?.name     ?? '')
   const displayDate     = mock ? 'Sat, 25 Apr • 14:00' : (event?.date     ?? '')
   const displayLocation = mock ? 'bunq HQ'             : (event?.location ?? '')
+  const bannerUrl       = mock ? null                  : (event?.bannerUrl ?? null)
 
   if (!mock && !eventId) return (
     <div>
@@ -95,7 +96,14 @@ export default function EventCreated({ mock, eventId, onNavigate }: Props) {
     <div>
       <TopBar />
 
-      <div className="success-hero">
+      <div
+        className="success-hero"
+        style={bannerUrl ? {
+          backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(${bannerUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        } : undefined}
+      >
         <div className="success-icon">
           <CircleCheckIcon size={32} color={isLive ? '#0a84ff' : '#8e8e93'} />
         </div>
