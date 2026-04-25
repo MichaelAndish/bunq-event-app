@@ -1,52 +1,55 @@
-# bunq Event Platform
+# bunq events
 
-> **We're tired of leaving money on the table.**
-> Event organisers deserve a platform that knows their numbers — not just their guest list.
+Imagine you are a festival organizer. 
 
----
+Your biggest problem is ticketing companies hide your customer data. 
 
-## The problem
+You sold 10,000 tickets and have no idea who bought them, who spent the most or when did they buy most. 
 
-Every event generates money in motion: ticket sales, bar tabs, group splits, repeat bookings. Yet the tools organisers use today are completely blind to it.
+With bunq events, you tap a button on the home screen of the bunq app and you are in control of events. 
 
-**Pricing is guesswork.** There is no signal telling you whether €25 is too cheap or whether your VIP tier is underselling.
+Build an event page with AI, invite people, gather attendee data and understand their behaviour. 
 
-**Payments are fragmented.** Cash, Tikkie, PayPal, bank transfers — every channel is manual, every reconciliation is pain.
+Now, you can optimise your next event for the best clients, price, and behaviours.
 
-**There is no feedback loop.** You run the event, money flows through it, and you learn nothing. The next event starts from zero.
+The idea works also for casual events.
 
-The core of the problem is that event management has never been connected to banking. bunq is a bank. That changes everything.
+Create a pizza night event, invite your friends and split exenses fairly with AI.
 
----
-
-## What we solve — and why it matters for bunq
-
-Events will be a **$100B market by 2032** *(grandviewresearch)*. bunq is uniquely positioned to own this category because no competitor can offer what a bank can: real spending data, instant payment rails, and a trusted financial identity for every attendee.
-
-### Strategic value for bunq
-
-| Signal | What it unlocks |
-|--------|----------------|
-| **Viral growth loop** | Every event invitation reaches non-bunq users. Paying for a ticket becomes the acquisition moment. |
-| **More transactions** | Ticket sales, group splits, bar spend, and loyalty rewards all flow through bunq accounts. |
-| **Business lock-in** | Organisers who use banking data to price and fill events cannot easily leave — the intelligence lives in bunq. |
-| **Increase retention** | Attendees who discover events through bunq have a reason to open the app beyond checking their balance. |
-| **Scalable & multimodal** | AI handles event creation from a photo or a sentence. One organiser can run many events with near-zero overhead. |
-| **Added user value** | bunq becomes the place you manage your social and financial life — not just your salary. |
-
-### Who wins
-
-**Business organisers** use banking data to optimise pricing, timing, and audience — turning every event into a data-driven decision rather than an expensive gamble.
-
-**Personal organisers** automate cost splitting via bunq.me, let AI handle the setup, and get visibility into who in their group actually costs money to invite.
-
-**Attendees** access events via QR or bunq.me (no account required), earn loyalty discounts for spending, and discover events inside the app they already use daily.
-
-**bunq** acquires users organically, drives transaction volume, and builds a data moat that makes the platform indispensable to both sides of every event.
+bunq events give you the financial intelligence for impactful events.
 
 ---
 
-## What it does
+## Benefits
+
+For Business Organizers
+- Simplify events & payments. 
+- Understand your best buyers.
+- Make you best buyers come back. 
+
+For People Organizers
+- Plan events with friends.
+- Split costs fairly, automatically. 
+- See which friends pay fairly. 
+
+For Event Attendee
+- Lower event fees for bunq users.
+- Get in events with one scan (QR or receipt). 
+- Find cool new events near you.
+
+For bunq
+- Grow user base with viral loop.
+- Tap into the $100B events market (Grand View Research).
+- Create business lock-in (organizers rely on data & intelligence).
+- Increase user retention and transactions.
+- Nudge non-bunq users to get app to access events and get discounts.
+- Scale events, from tiny parties to giant festivals.
+- Leverage multimodal AI, from photos and videos, to text and voice.
+- Tap on existing UX/UI and API, making innovation easier.
+
+---
+
+## How it works
 
 **For organisers**
 - Create events manually or let the AI analyse venue photos and generate a complete event draft
