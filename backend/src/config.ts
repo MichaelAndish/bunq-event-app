@@ -26,8 +26,15 @@ const schema = z.object({
   BUNQ_PRIVATE_KEY_PATH:   z.string().default(''),
   BUNQ_PUBLIC_KEY_PATH:    z.string().default(''),
   BUNQ_SERVER_PUBLIC_KEY_PATH: z.string().default(''),
-  /** Optional inline PEM; prefer BUNQ_PRIVATE_KEY_PATH. */
-  BUNQ_PRIVATE_KEY:    z.string().default(''),
+  /**
+   * Optional inline PEM; prefer BUNQ_PRIVATE_KEY_PATH.
+   * When passed via App Runner env vars the PEM must have real newlines replaced
+   * with the two-character sequence \n — this preprocessor restores them.
+   */
+  BUNQ_PRIVATE_KEY: z.preprocess(
+    v => typeof v === 'string' ? v.replace(/\\n/g, '\n') : v,
+    z.string().default(''),
+  ),
   FRONTEND_ORIGIN:     z.string().default('http://localhost:9292'),
 
   // Storage — MinIO locally, S3 in production.

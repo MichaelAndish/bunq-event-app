@@ -1,14 +1,14 @@
 # bunq events
 
-Imagine you are a festival organizer. 
+Imagine you are a festival organizer.
 
-Your biggest problem is ticketing companies hide your customer data. 
+Your biggest problem is ticketing companies hide your customer data.
 
-You sold 10,000 tickets and have no idea who bought them, who spent the most or when did they buy most. 
+You sold 10,000 tickets and have no idea who bought them, who spent the most or when did they buy most.
 
-With bunq events, you tap a button on the home screen of the bunq app and you are in control of events. 
+With bunq events, you tap a button on the home screen of the bunq app and you are in control of events.
 
-Build an event page with AI, invite people, gather attendee data and understand their behaviour. 
+Build an event page with AI, invite people, gather attendee data and understand their behaviour.
 
 Now, you can optimise your next event for the best clients, price, and behaviours.
 
@@ -23,21 +23,25 @@ bunq events give you the financial intelligence for impactful events.
 ## Benefits
 
 For Business Organizers
-- Simplify events & payments. 
+
+- Simplify events & payments.
 - Understand your best buyers.
-- Make you best buyers come back. 
+- Make you best buyers come back.
 
 For People Organizers
+
 - Plan events with friends.
-- Split costs fairly, automatically. 
-- See which friends pay fairly. 
+- Split costs fairly, automatically.
+- See which friends pay fairly.
 
 For Event Attendee
+
 - Lower event fees for bunq users.
-- Get in events with one scan (QR or receipt). 
+- Get in events with one scan (QR or receipt).
 - Find cool new events near you.
 
 For bunq
+
 - Grow user base with viral loop.
 - Tap into the $100B events market (Grand View Research).
 - Create business lock-in (organizers rely on data & intelligence).
@@ -52,16 +56,19 @@ For bunq
 ## How it works
 
 **For organisers**
+
 - Create events manually or let the AI analyse venue photos and generate a complete event draft
 - Set multiple ticket tiers with custom pricing (EUR / USD / GBP)
 - Manage live, draft, and archived events from one screen
 - Track ticket sales and revenue per event
 
 **For attendees**
+
 - Browse and join events
 - Purchase tickets via bunq.me payment links — no bunq account required
 
 **Under the hood**
+
 - AI agent (Claude) analyses venue images, auto-fills event details, and suggests ticket pricing
 - Uploaded venue images are stored in MinIO (local) or S3 (production) and become the event banner
 - Payments are routed through the bunq sandbox API with full RSA-signed request flows
@@ -74,51 +81,51 @@ For bunq
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Browser                               │
-│              React + TypeScript (phone frame)                │
-│                       port 9292                              │
+│                        Browser                              │
+│              React + TypeScript (phone frame)               │
+│                       port 9292                             │
 └──────────────────────┬──────────────────────────────────────┘
                        │  /api/* (Vite proxy)
 ┌──────────────────────▼──────────────────────────────────────┐
-│                  Hono API  (Node.js)                         │
-│                      port 9191                               │
-│                                                              │
-│  /health     liveness check                                  │
-│  /events     CRUD — events + ticket tiers                    │
+│                  Hono API  (Node.js)                        │
+│                      port 9191                              │
+│                                                             │
+│  /health     liveness check                                 │
+│  /events     CRUD — events + ticket tiers                   │
 │  /agent      AI venue analysis + Mastra workflow trigger     │
-│  /client     bunq account balance + transactions             │
-│                                                              │
-│  ┌─────────────────┐   ┌──────────────────────────────┐    │
-│  │   Mastra 1.x    │   │      bunq Sandbox API         │    │
-│  │  Agents +       │   │  payments, accounts,           │    │
-│  │  Workflows +    │   │  request inquiries, bunq.me    │    │
-│  │  PG Storage     │   └──────────────────────────────┘    │
+│  /client     bunq account balance + transactions            │
+│                                                             │
+│  ┌─────────────────┐   ┌──────────────────────────────┐     │
+│  │   Mastra 1.x    │   │      bunq Sandbox API        │     │
+│  │  Agents +       │   │  payments, accounts,         │     │
+│  │  Workflows +    │   │  request inquiries, bunq.me   │     │
+│  │  PG Storage     │   └──────────────────────────────┘     │
 │  └────────┬────────┘                                        │
 └───────────┼─────────────────────────┬───────────────────────┘
             │                         │
-┌───────────▼─────────────┐  ┌────────▼───────────────────────┐
+┌───────────▼──────────────┐  ┌────────▼────────────────────────┐
 │      PostgreSQL 16       │  │   MinIO  (S3-compatible)        │
 │  events / ticket_tiers   │  │   venue images + event banners  │
 │  tickets / mastra state  │  │   port 9000 (API)               │
 └──────────────────────────┘  │   port 9001 (console)           │
-                               └────────────────────────────────┘
+                              └─────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────┐
-│              Mastra Studio  (separate container)              │
-│                       port 4111                               │
-│   test agents · inspect workflow runs · iterate on prompts   │
+│              Mastra Studio  (separate container)             │
+│                       port 4111                              │
+│   test agents · inspect workflow runs · iterate on prompts    │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 ### Service breakdown
 
-| Service | Tech | Port | Purpose |
-|---------|------|------|---------|
-| `frontend` | Vite + React + TypeScript | 9292 | Phone-frame UI |
-| `backend` | Hono + Node.js + TypeScript | 9191 | REST API, AI, bunq integration |
-| `mastra` | Mastra CLI dev server | 4111 | Agent Studio UI |
-| `db` | PostgreSQL 16 | 5432 | App data + Mastra state |
-| `minio` | MinIO (S3-compatible) | 9000 / 9001 | File storage (images) |
+| Service    | Tech                        | Port        | Purpose                        |
+| ---------- | --------------------------- | ----------- | ------------------------------ |
+| `frontend` | Vite + React + TypeScript   | 9292        | Phone-frame UI                 |
+| `backend`  | Hono + Node.js + TypeScript | 9191        | REST API, AI, bunq integration |
+| `mastra`   | Mastra CLI dev server       | 4111        | Agent Studio UI                |
+| `db`       | PostgreSQL 16               | 5432        | App data + Mastra state        |
+| `minio`    | MinIO (S3-compatible)       | 9000 / 9001 | File storage (images)          |
 
 ### Backend modules
 
@@ -190,6 +197,7 @@ Mastra uses the same PostgreSQL instance for its own state (agent run history, p
 ## Getting started
 
 ### Prerequisites
+
 - Docker + Docker Compose
 - (Optional) Anthropic API key — AI features fall back to mock data without it
 - (Optional) bunq API key — client routes return mock data without it
@@ -235,12 +243,12 @@ make status     # shows container health + all URLs
 
 All services come up in the right order (MinIO and Postgres healthy before backend starts). The storage bucket is created automatically on first run.
 
-| URL | What's there |
-|-----|-------------|
-| `http://localhost:9292` | Mobile app (phone frame on desktop) |
-| `http://localhost:9191/health` | `{ "status": "ok" }` |
-| `http://localhost:4111` | Mastra Studio — test agents + workflows |
-| `http://localhost:9001` | MinIO console (minioadmin / minioadmin) |
+| URL                            | What's there                            |
+| ------------------------------ | --------------------------------------- |
+| `http://localhost:9292`        | Mobile app (phone frame on desktop)     |
+| `http://localhost:9191/health` | `{ "status": "ok" }`                    |
+| `http://localhost:4111`        | Mastra Studio — test agents + workflows  |
+| `http://localhost:9001`        | MinIO console (minioadmin / minioadmin) |
 
 Hot-reload is active across all services — edit files in `backend/src/` or `frontend/src/` and changes apply instantly. The Mastra dev server also watches `src/mastra/` and restarts on changes.
 
@@ -267,9 +275,11 @@ make refresh-session  # refresh an expired session token
 Images uploaded during AI venue analysis are stored in MinIO locally, and can be switched to AWS S3 for production with only env var changes — no code changes needed.
 
 ### Local (MinIO)
+
 MinIO runs as a Docker service. The backend connects to it internally via `http://minio:9000` and the browser loads images via `http://localhost:9000`.
 
 ### Production (AWS S3)
+
 ```env
 STORAGE_ENDPOINT=              # empty = use AWS S3 defaults
 STORAGE_BUCKET=my-bucket
@@ -287,6 +297,7 @@ STORAGE_FORCE_PATH_STYLE=false
 Open `http://localhost:4111` to access the Mastra Studio — a live UI for the AI layer.
 
 From the Studio you can:
+
 - **Test the venue-analysis agent** — send text or images, see the structured response
 - **Trigger the create-event workflow** — run validate → persist end-to-end
 - **Inspect run history** — step-by-step output, timing, errors
@@ -300,20 +311,20 @@ The Studio talks to a separate `mastra` container that hot-reloads when you edit
 
 ### Internal API (`localhost:9191`)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Liveness check |
-| `GET` | `/events` | List all events |
-| `POST` | `/events` | Create event + tiers |
-| `GET` | `/events/:id` | Get event with tiers |
-| `PUT` | `/events/:id` | Update event (partial) |
-| `DELETE` | `/events/:id` | Delete event |
-| `POST` | `/agent/analyze-venue` | Upload images → storage → Claude → event draft |
-| `POST` | `/agent/run` | Trigger create-event workflow |
-| `GET` | `/agent/status` | Agent + workflow registry |
-| `GET` | `/client/status` | bunq connection status |
-| `GET` | `/client/balance` | Account balance |
-| `GET` | `/client/transactions` | Recent transactions |
+| Method   | Path                   | Description                                    |
+| -------- | ---------------------- | ---------------------------------------------- |
+| `GET`    | `/health`              | Liveness check                                 |
+| `GET`    | `/events`              | List all events                                |
+| `POST`   | `/events`              | Create event + tiers                           |
+| `GET`    | `/events/:id`          | Get event with tiers                           |
+| `PUT`    | `/events/:id`          | Update event (partial)                         |
+| `DELETE` | `/events/:id`          | Delete event                                   |
+| `POST`   | `/agent/analyze-venue` | Upload images → storage → Claude → event draft |
+| `POST`   | `/agent/run`           | Trigger create-event workflow                  |
+| `GET`    | `/agent/status`        | Agent + workflow registry                      |
+| `GET`    | `/client/status`       | bunq connection status                         |
+| `GET`    | `/client/balance`      | Account balance                                |
+| `GET`    | `/client/transactions` | Recent transactions                            |
 
 ### Bruno test collections (`test/`)
 
@@ -402,11 +413,13 @@ Open the collection in Bruno desktop (`test/bunq-api/`) and select the **Sandbox
 bunq's sandbox lets you create a fake user instantly, no registration needed.
 
 **Run in Bruno:**
+
 ```
 Setup / 1 - Create Sandbox User Person
 ```
 
 **What it calls:**
+
 ```
 POST https://public-api.sandbox.bunq.com/v1/sandbox-user-person
 (no auth, no body required)
@@ -438,11 +451,13 @@ openssl rsa -in bunq-client-private.pem -pubout -out bunq-client-public.pem
 Tell bunq who you are by registering your public key. This gives you an `installation_token` used in the next two steps.
 
 **Run in Bruno:**
+
 ```
 Setup / 4 - Create Installation
 ```
 
 **What it calls:**
+
 ```
 POST /v1/installation
 Body: { "client_public_key": "-----BEGIN PUBLIC KEY-----\n..." }
@@ -459,11 +474,13 @@ The collection does **not** put `{{publicKeyPem}}` inside `body:json` — a mult
 Tell bunq that this machine is allowed to use the installation token. Only needs to be done once per device.
 
 **Run in Bruno:**
+
 ```
 Setup / 5 - Register Device Server
 ```
 
 **What it calls:**
+
 ```
 POST /v1/device-server
 Header: X-Bunq-Client-Authentication: <installationToken>
@@ -479,11 +496,13 @@ Returns an `Id` — nothing to save, just needs to succeed (200).
 Exchange your API key for a short-lived `session_token`. This is what you use for all actual API calls.
 
 **Run in Bruno:**
+
 ```
 Setup / 6 - Create Session
 ```
 
 **What it calls:**
+
 ```
 POST /v1/session-server
 Header: X-Bunq-Client-Authentication: <installationToken>
@@ -499,11 +518,13 @@ Body: { "secret": "<apiKey>" }
 List your monetary accounts to get the `accountId` needed for balance and payment calls.
 
 **Run in Bruno:**
+
 ```
 Accounts / 1 - List Monetary Accounts
 ```
 
 **What it calls:**
+
 ```
 GET /v1/user/<userId>/monetary-account-bank
 Header: X-Bunq-Client-Authentication: <sessionToken>
@@ -538,12 +559,12 @@ bru run test/bunq-api/Setup --env Sandbox --sandbox=developer
 
 ### What's available after setup
 
-| Folder | What you can do |
-|--------|----------------|
-| `Accounts/` | List accounts, check balance, top up via Sugar Daddy |
-| `Payments/` | Send payments (auto RSA-signed), batch payments |
-| `Request Inquiries/` | Create, list, and accept payment requests |
-| `bunq.me/` | Create and manage public payment tabs |
+| Folder               | What you can do                                      |
+| -------------------- | ---------------------------------------------------- |
+| `Accounts/`          | List accounts, check balance, top up via Sugar Daddy |
+| `Payments/`          | Send payments (auto RSA-signed), batch payments      |
+| `Request Inquiries/` | Create, list, and accept payment requests            |
+| `bunq.me/`           | Create and manage public payment tabs                |
 
 Payment requests are signed automatically — the pre-request script reads `privateKeyPem` from the environment, signs the request body with SHA-256/RSA, and sets the `X-Bunq-Client-Signature` header.
 
@@ -551,14 +572,14 @@ Payment requests are signed automatically — the pre-request script reads `priv
 
 ## Tech stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18, TypeScript, Vite, plain CSS |
-| Backend | Hono, Node.js, TypeScript |
-| AI agents | Mastra 1.x, Claude Opus via Vercel AI SDK |
-| Agent Studio | Mastra Studio (built into `mastra dev`) |
-| Database | PostgreSQL 16, Drizzle ORM |
-| File storage | MinIO (local) / AWS S3 (production) |
-| Payments | bunq API (sandbox) |
-| Infrastructure | Docker Compose |
-| API testing | Bruno |
+| Layer          | Technology                                |
+| -------------- | ----------------------------------------- |
+| Frontend       | React 18, TypeScript, Vite, plain CSS     |
+| Backend        | Hono, Node.js, TypeScript                 |
+| AI agents      | Mastra 1.x, Claude Opus via Vercel AI SDK |
+| Agent Studio   | Mastra Studio (built into `mastra dev`)   |
+| Database       | PostgreSQL 16, Drizzle ORM                |
+| File storage   | MinIO (local) / AWS S3 (production)       |
+| Payments       | bunq API (sandbox)                        |
+| Infrastructure | Docker Compose                            |
+| API testing    | Bruno                                     |

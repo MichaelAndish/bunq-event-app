@@ -117,35 +117,41 @@ aws rds describe-db-subnet-groups --db-subnet-group-name "${APP}-db-subnet" \
        --region "$REGION"
 echo "  RDS Subnet Group: ${APP}-db-subnet"
 
-# ── Aurora Serverless v2 cluster ─────────────────────────────────────────────
-CLUSTER_STATUS=$(aws rds describe-db-clusters \
-  --db-cluster-identifier "${APP}-db" \
-  --query 'DBClusters[0].Status' --output text --region "$REGION" 2>/dev/null || echo "notfound")
+# ── RDS PostgreSQL instance ────────────────────────────────────────────────
+CLUSTER_STATUS=$(aws rds describe-db-instances \
+  --db-instance-identifier "${APP}-db" \
+  --query 'DBInstances[0].DBInstanceStatus' --output text --region "$REGION" 2>/dev/null || echo "notfound")
 if [[ "$CLUSTER_STATUS" == "notfound" ]]; then
-  DB_PASS=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 24)
-  aws rds create-db-cluster \
-    --db-cluster-identifier "${APP}-db" \
-    --engine aurora-postgresql \
-    --engine-version 16.4 \
-    --database-name bunq \
+  DB_PASS=$(openssl rand -base64 18 | tr -dc 'A-Za-z0-9' | head -c 18)
+
+  aws rds create-db-instance \
+    --db-instance-identifier "${APP}-db" \
+    --db-instance-class db.t3.micro \
+    --engine postgres \
+    --engine-version 16 \
     --master-username bunq \
     --master-user-password "$DB_PASS" \
-    --serverless-v2-scaling-configuration MinCapacity=0.5,MaxCapacity=4 \
+    --db-name bunq \
     --vpc-security-group-ids "$SG_ID" \
     --db-subnet-group-name "${APP}-db-subnet" \
-    --enable-http-endpoint \
+    --no-publicly-accessible \
+    --storage-type gp2 \
+    --allocated-storage 20 \
+    --backup-retention-period 7 \
     --region "$REGION" \
-    --output text --query 'DBCluster.Endpoint' &>/dev/null
-  aws rds create-db-instance \
-    --db-instance-identifier "${APP}-db-instance" \
-    --db-cluster-identifier "${APP}-db" \
-    --db-instance-class db.serverless \
-    --engine aurora-postgresql \
-    --region "$REGION" &>/dev/null
-  echo "  Aurora: ${APP}-db  password saved — set DATABASE_URL secret manually:"
-  echo "    postgresql://bunq:${DB_PASS}@<cluster-endpoint>:5432/bunq"
+    --output text --query 'DBInstance.DBInstanceIdentifier' > /dev/null
+
+  echo "  RDS PostgreSQL: ${APP}-db  (provisioning ~5 min)"
+  echo "  ⚠️  SAVE YOUR DATABASE PASSWORD NOW: $DB_PASS"
+  echo "  Endpoint available after provisioning — get it with:"
+  echo "    aws rds describe-db-instances --db-instance-identifier bunq-db --query 'DBInstances[0].Endpoint.Address' --output text"
+  echo "  DATABASE_URL will be:"
+  echo "    postgresql://bunq:${DB_PASS}@<endpoint>:5432/bunq"
 else
-  echo "  Aurora: ${APP}-db ($CLUSTER_STATUS)"
+  DB_ENDPOINT=$(aws rds describe-db-instances \
+    --db-instance-identifier "${APP}-db" \
+    --query 'DBInstances[0].Endpoint.Address' --output text --region "$REGION" 2>/dev/null)
+  echo "  RDS: ${APP}-db ($CLUSTER_STATUS) → $DB_ENDPOINT"
 fi
 
 # ── App Runner VPC connector ─────────────────────────────────────────────────
