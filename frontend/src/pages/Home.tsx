@@ -4,12 +4,12 @@ import NetWealthCard from '../components/NetWealthCard'
 import ActionButton from '../components/ActionButton'
 import BankAccounts from '../components/BankAccounts'
 import TransactionItem from '../components/TransactionItem'
-import { SearchIcon, ExchangeIcon } from '../components/Icons'
+import { SearchIcon } from '../components/Icons'
 import { api } from '../api/client'
 import type { Transaction } from '../api/client'
-import type { Page } from '../App'
+import type { Page, ApiStatus } from '../App'
 
-type Props = { onNavigate: (page: Page) => void }
+type Props = { mock: boolean; apiStatus: ApiStatus; onNavigate: (page: Page) => void }
 
 const MOCK_TRANSACTIONS: Transaction[] = [
   { id: '1', amount: '69.00',  currency: 'EUR', description: 'General Admission – Neon Nights', counterparty: 'Alex Rivera',  createdAt: '' },
@@ -41,30 +41,30 @@ function todayTotal(txs: Transaction[]): string {
   return sum > 0 ? sum.toFixed(2) : ''
 }
 
-export default function Home({ onNavigate }: Props) {
-  const [mock, setMock]                 = useState<boolean | null>(null)
-  const [displayName, setDisplayName]   = useState('')
-  const [userId, setUserId]             = useState('')
-  const [accountId, setAccountId]       = useState('')
-  const [accountName, setAccountName]   = useState('')
-  const [balance, setBalance]           = useState('')
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+export default function Home({ mock, apiStatus, onNavigate }: Props) {
+  const [displayName,   setDisplayName]   = useState('')
+  const [userId,        setUserId]        = useState('')
+  const [accountId,     setAccountId]     = useState('')
+  const [accountName,   setAccountName]   = useState('')
+  const [balance,       setBalance]       = useState('')
+  const [transactions,  setTransactions]  = useState<Transaction[]>([])
 
+  // Fetch user / account data once we know the API is online
   useEffect(() => {
+    if (apiStatus !== 'online' || mock) return
     api.clientStatus()
       .then(s => {
-        setMock(s.mock)
         setDisplayName(s.displayName ?? '')
-        if (!s.mock && s.userId && s.accountId) {
+        if (s.userId && s.accountId) {
           setUserId(s.userId)
           setAccountId(s.accountId)
         }
       })
-      .catch(() => setMock(false))
-  }, [])
+      .catch(() => {})
+  }, [apiStatus, mock])
 
   useEffect(() => {
-    if (mock || !userId || !accountId) return
+    if (!userId || !accountId) return
     api.clientBalance(userId, accountId)
       .then(b => {
         setBalance(b.balance)
@@ -75,7 +75,7 @@ export default function Home({ onNavigate }: Props) {
     api.clientTransactions(userId, accountId, 7)
       .then(setTransactions)
       .catch(() => {})
-  }, [mock, userId, accountId])
+  }, [userId, accountId])
 
   const displayTransactions = mock ? MOCK_TRANSACTIONS : transactions
 
@@ -83,14 +83,15 @@ export default function Home({ onNavigate }: Props) {
     <div>
       <TopBar name={displayName || undefined} />
       <h1 className="page-title">Home</h1>
+
       <NetWealthCard
         balance={mock ? '383000.00' : balance || undefined}
         todayDelta={mock ? '39234.95' : todayTotal(transactions) || undefined}
       />
 
       <div className="action-grid">
-        <ActionButton label="Pay"      borderColor="#ff9500" dotStyle={{ background: '#ff9500' }} disabled />
-        <ActionButton label="Request"  borderColor="#0a84ff" dotStyle={{ background: '#0a84ff' }} disabled />
+        <ActionButton label="Pay"       borderColor="#ff9500" dotStyle={{ background: '#ff9500' }} disabled />
+        <ActionButton label="Request"   borderColor="#0a84ff" dotStyle={{ background: '#0a84ff' }} disabled />
         <ActionButton label="Add Money" borderColor="#bf5af2" dotStyle={{ background: 'linear-gradient(135deg, #bf5af2, #ff375f)' }} disabled />
         <ActionButton
           label="Events"
@@ -98,11 +99,12 @@ export default function Home({ onNavigate }: Props) {
           dotStyle={{ background: '#30d158' }}
           dotContent={<span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1 }}>+</span>}
           onClick={() => onNavigate('events')}
+          disabled={apiStatus !== 'online'}
         />
       </div>
 
       <BankAccounts
-        mock={mock ?? false}
+        mock={mock}
         name={accountName || undefined}
         balance={balance || undefined}
       />
@@ -129,7 +131,9 @@ export default function Home({ onNavigate }: Props) {
           ))
         ) : (
           <div className="list-row" style={{ color: '#8e8e93', fontSize: 14 }}>
-            <span style={{ padding: '8px 0' }}>No transactions yet</span>
+            <span style={{ padding: '8px 0' }}>
+              {apiStatus === 'offline' ? 'Backend offline — no data available' : 'No transactions yet'}
+            </span>
           </div>
         )}
       </div>

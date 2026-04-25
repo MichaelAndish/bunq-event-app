@@ -8,7 +8,7 @@ import { api } from '../api/client'
 import type { EventRow } from '../api/client'
 import type { Page } from '../App'
 
-type Props = { mock: boolean; onNavigate: (page: Page) => void; onBack: () => void }
+type Props = { mock: boolean; onNavigate: (page: Page) => void; onBack: () => void; onSelectEvent?: (id: string) => void }
 
 const ICON_GRADIENTS = [
   'linear-gradient(135deg, #bf5af2, #9b59b6)',
@@ -24,7 +24,7 @@ const MOCK_DISCOVER = [
   { id: 'art-exhibit',  name: 'Art Exhibition',    location: 'Paris, France',     gradient: ICON_GRADIENTS[3] },
 ]
 
-export default function Events({ mock, onNavigate, onBack }: Props) {
+export default function Events({ mock, onNavigate, onBack, onSelectEvent }: Props) {
   const [liveEvents, setLiveEvents] = useState<EventRow[]>([])
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function Events({ mock, onNavigate, onBack }: Props) {
           {discoverEvents.map(({ id, name, location, gradient }, i) => (
             <div key={id}>
               {i > 0 && <div className="list-separator" />}
-              <button className="list-row list-row-btn" onClick={() => onNavigate('guest-preview')}>
+              <button className="list-row list-row-btn" onClick={() => { onSelectEvent?.(id); onNavigate('guest-preview') }}>
                 <span className="list-icon" style={{ background: gradient }}>
                   <MusicNoteIcon size={20} color="#fff" />
                 </span>

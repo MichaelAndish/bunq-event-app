@@ -8,6 +8,7 @@ import { runSeed }       from './db/seed'
 import { ensureBucket } from './storage/client'
 import healthRouter      from './routes/health'
 import eventsRouter      from './routes/events'
+import ticketsRouter     from './routes/tickets'
 import agentRouter       from './routes/agent'
 import clientRouter      from './routes/client'
 
@@ -18,6 +19,7 @@ app.use('*', cors({ origin: config.FRONTEND_ORIGIN, allowMethods: ['GET', 'POST'
 
 app.route('/health',         healthRouter)
 app.route('/events',         eventsRouter)
+app.route('/tickets',        ticketsRouter)
 app.route('/agent',          agentRouter)
 app.route('/client',         clientRouter)
 

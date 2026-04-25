@@ -35,7 +35,19 @@ type EventRow = {
   createdAt: string
 }
 
-export type { Transaction, EventRow }
+type TicketRow = {
+  id: string
+  tierId: string
+  buyerName: string
+  buyerEmail: string
+  paymentStatus: 'pending' | 'paid' | 'failed'
+  bunqPaymentId: string | null
+  purchasedAt: string
+  tier:  { id: string; name: string; price: string; currency: string }
+  event: { id: string; name: string; date: string; location: string }
+}
+
+export type { Transaction, EventRow, TicketRow }
 
 export const api = {
   health: () =>
@@ -77,6 +89,15 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+
+  createTicket: (tierId: string, buyerName: string, buyerEmail: string) =>
+    request<TicketRow>('/tickets', {
+      method: 'POST',
+      body: JSON.stringify({ tierId, buyerName, buyerEmail }),
+    }),
+
+  getTicket: (id: string) =>
+    request<TicketRow>(`/tickets/${id}`),
 
   getEventStats: (id: string) =>
     request<{

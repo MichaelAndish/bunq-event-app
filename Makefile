@@ -15,7 +15,7 @@ help:
 	@printf "\n"
 
 install:
-	docker compose build
+	docker compose build backend mastra frontend
 
 run:
 	docker compose up -d --force-recreate backend mastra
