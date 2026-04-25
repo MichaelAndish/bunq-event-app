@@ -2,9 +2,9 @@
 
 Imagine you are a festival organizer. 
 
-Your biggest problem is that ticketing companies hide your customer data. 
+Your biggest problem is ticketing companies hide your customer data. 
 
-You sold 10,000 tickets and you have no idea who bought them, who spends the most, what they bought and when. 
+You sold 10,000 tickets and have no idea who bought them, who spent the most and what they bought. 
 
 With bunq events, you tap a button on the home screen of the bunq app and you are in control of events. 
 
@@ -16,7 +16,7 @@ The idea also works for casual events.
 
 Create a pizza night, invite your friends and track and split automatically so everyone is treated fairly. 
 
-From huge festivals to cozy nights, bunq events the financial intelligence you need to create awesome events, right from your pocket. 
+From huge festivals to cozy nights, bunq events give you the financial intelligence you need to create events.
 
 ---
 
